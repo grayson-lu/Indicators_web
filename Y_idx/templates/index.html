@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>数字货币市场监控面板</title>
+    <script src="https://cdn.bootcss.com/jquery/3.0.0/jquery.min.js"></script>
+    <script src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        .container {
+            width: 120%;
+            max-width: 1800px;
+            margin: 20px auto;
+            overflow-y: auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #1d1d1f;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-weight: 600;
+            margin: 0;
+        }
+        .card {
+            background-color: white;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .card-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f5f5f7;
+        }
+        .card-header h2 {
+            margin: 0;
+            font-weight: 500;
+            font-size: 20px;
+        }
+        .card-header .toggle-icon {
+            width: 24px;
+            height: 24px;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        .card-header .toggle-icon:before,
+        .card-header .toggle-icon:after {
+            content: '';
+            position: absolute;
+            background-color: #1d1d1f;
+            transition: transform 0.3s ease;
+        }
+        .card-header .toggle-icon:before {
+            width: 2px;
+            height: 16px;
+            top: 4px;
+            left: 11px;
+            transform: rotate(90deg);
+        }
+        .card-header .toggle-icon:after {
+            width: 16px;
+            height: 2px;
+            top: 11px;
+            left: 4px;
+        }
+        .card.active .toggle-icon:before {
+            transform: rotate(0);
+        }
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        .card.active .card-body {
+            max-height: 3000px; /* 增加最大高度以容纳更多内容 */
+        }
+        .info-panel {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+        .info-box {
+            flex: 1;
+            min-width: 200px;
+            margin: 5px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+        .info-box h3 {
+            margin: 0;
+            color: #86868b;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        .info-box p {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 10px 0;
+            color: #1d1d1f;
+        }
+        .info-box small {
+            color: #86868b;
+            font-size: 12px;
+        }
+        .chart {
+            width: 100%;
+            height: 500px; /* 增加图表高度 */
+            padding: 20px;
+            overflow: hidden;
+        }
+        .chart-row {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 20px 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #86868b;
+            font-size: 14px;
+        }
+        .nav-menu {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .nav-menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            gap: 15px;
+        }
+        .nav-menu a {
+            color: #1d1d1f;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 15px;
+            transition: all 0.2s ease;
+        }
+        .nav-menu a:hover {
+            background-color: #f5f5f7;
+        }
+        .highlight-card {
+            border: 2px solid #0071e3;
+        }
+        
+        /* 波动率选项卡样式 */
+        .volatility-tabs {
+            margin: 0 20px;
+        }
+        .tab-header {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 10px;
+        }
+        .tab-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .tab-item:hover {
+            color: #0071e3;
+        }
+        .tab-item.active {
+            border-bottom: 2px solid #0071e3;
+            color: #0071e3;
+        }
+        .tab-content {
+            position: relative;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>数字货币市场监控面板</h1>
+        </div>
+        
+        <!-- 导航菜单 -->
+        <div class="nav-menu">
+            <ul>
+                <li><a href="#y_idx">Y指数</a></li>
+                <li><a href="#btc_rainbow">BTC彩虹</a></li>
+                <li><a href="#fear_greed">贪婪恐慌</a></li>
+                <li><a href="#market_breadth">市场宽度</a></li>
+                <li><a href="#cross_section_diff">横截面差异</a></li>
+                <li><a href="#volatility">波动率</a></li>
+            </ul>
+        </div>
+        
+        <!-- Y指数面板 -->
+        <div id="y_idx" class="card active">
+            <div class="card-header">
+                <h2>Y指数监控</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>最新数值</h3>
+                        <p>{{ latest_value }}</p>
+                        <small>{{ latest_time }}</small>
+                    </div>
+                </div>
+                <div id="y_idx_chart" class="chart">
+                    {{ y_idx_chart|safe }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- BTC彩虹价格表面板 -->
+        {% if btc_rainbow_chart is defined %}
+        <div id="btc_rainbow" class="card">
+            <div class="card-header">
+                <h2>BTC彩虹价格表</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>当前价格</h3>
+                        <p>${{ latest_btc_price }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>当前区间</h3>
+                        <p>{{ current_btc_level }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>价格区间说明</h3>
+                        <small>
+                            彩虹图表根据对数回归将BTC价格分为多个区间，不同颜色代表不同投资建议。<br>
+                            {% if btc_price_level_1 is defined %}
+                            FL9：${{ btc_price_level_2 }}~${{ btc_price_level_1 }} - 全都是泡沫！！！<br>
+                            FL8：${{ btc_price_level_3 }}~${{ btc_price_level_2 }} - 卖掉。说认真的，卖掉！<br>
+                            FL7：${{ btc_price_level_4 }}~${{ btc_price_level_3 }} - FOMO情绪加剧<br>
+                            FL6：${{ btc_price_level_5 }}~${{ btc_price_level_4 }} - 这是泡沫吗？<br>
+                            FL5：${{ btc_price_level_6 }}~${{ btc_price_level_5 }} - 拿住！！！<br>
+                            FL4：${{ btc_price_level_7 }}~${{ btc_price_level_6 }} - 仍然便宜<br>
+                            FL3：${{ btc_price_level_8 }}~${{ btc_price_level_7 }} - 积攒！<br>
+                            FL2：${{ btc_price_level_9 }}~${{ btc_price_level_8 }} - 买买买！<br>
+                            FL1：${{ btc_price_level_10 }}~${{ btc_price_level_9 }} - 基本算清仓大甩卖了！<br>
+                            FL0：$0~${{ btc_price_level_10 }} - 跌破底板了！！！<br>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div id="btc_rainbow_chart" class="chart" style="height: 650px;">
+                    {{ btc_rainbow_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 贪婪恐慌指数面板 -->
+        {% if fear_greed_chart is defined %}
+        <div id="fear_greed" class="card">
+            <div class="card-header">
+                <h2>贪婪恐慌指数</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>当前指数</h3>
+                        <p>{{ latest_fear_greed }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>情绪分类</h3>
+                        <p>{{ fear_greed_class }}</p>
+                        <small>0-25极度恐慌，25-46恐慌，46-54中性，54-75贪婪，75-100极度贪婪</small>
+                    </div>
+                </div>
+                <div id="fear_greed_chart" class="chart" style="height: 550px;">
+                    {{ fear_greed_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 波动率指数面板 -->
+        {% if volatility_chart is defined %}
+        <div id="volatility" class="card">
+            <div class="card-header">
+                <h2>市场波动率指标</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>7日市场波动率</h3>
+                        <p>{{ latest_volatility_7d }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>30日市场波动率</h3>
+                        <p>{{ latest_volatility_30d }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>90日市场波动率</h3>
+                        <p>{{ latest_volatility_90d }}</p>
+                    </div>
+                    {% if latest_amplitude_volatility_7d is defined %}
+                    <div class="info-box">
+                        <h3>7日振幅波动率</h3>
+                        <p>{{ latest_amplitude_volatility_7d }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 波动率指标切换选项卡 -->
+                <div class="volatility-tabs">
+                    <div class="tab-header">
+                        <div class="tab-item active" data-target="volatility-chart">市场波动率</div>
+                        {% if amplitude_volatility_chart is defined %}
+                        <div class="tab-item" data-target="amplitude-volatility-chart">振幅波动率</div>
+                        {% endif %}
+                        {% if high_volatility_ratio_chart is defined %}
+                        <div class="tab-item" data-target="high-volatility-ratio-chart">高波动币种占比</div>
+                        {% endif %}
+                    </div>
+                    <div class="tab-content">
+                        <div id="volatility-chart" class="tab-pane active chart">
+                            {{ volatility_chart|safe }}
+                        </div>
+                        {% if amplitude_volatility_chart is defined %}
+                        <div id="amplitude-volatility-chart" class="tab-pane chart">
+                            {{ amplitude_volatility_chart|safe }}
+                        </div>
+                        {% endif %}
+                        {% if high_volatility_ratio_chart is defined %}
+                        <div id="high-volatility-ratio-chart" class="tab-pane chart">
+                            {{ high_volatility_ratio_chart|safe }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 流动性指数面板 -->
+        {% if liquidity_chart is defined %}
+        <div id="liquidity" class="card">
+            <div class="card-header">
+                <h2>市场流动性指数</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>30日流动性</h3>
+                        <p>{{ latest_liquidity_30d }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>90日流动性</h3>
+                        <p>{{ latest_liquidity_90d }}</p>
+                    </div>
+                </div>
+                <div id="liquidity_chart" class="chart">
+                    {{ liquidity_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 创新高指数面板 -->
+        {% if new_highs_chart is defined %}
+        <div id="new_highs" class="card">
+            <div class="card-header">
+                <h2>创新高指数</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>30日创新高占比</h3>
+                        <p>{{ latest_new_highs_30d }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>90日创新高占比</h3>
+                        <p>{{ latest_new_highs_90d }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>365日创新高占比</h3>
+                        <p>{{ latest_new_highs_365d }}</p>
+                    </div>
+                </div>
+                <div id="new_highs_chart" class="chart">
+                    {{ new_highs_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 市场宽度指数面板 -->
+        {% if market_breadth_chart is defined %}
+        <div id="market_breadth" class="card">
+            <div class="card-header">
+                <h2>当日市场宽度</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>当日市场宽度</h3>
+                        <p>{{ latest_market_breadth }}</p>
+                        <small>大于0表示多方优势，小于0表示空方优势</small>
+                    </div>
+                    {% if latest_market_breadth_7d is defined %}
+                    <div class="info-box">
+                        <h3>7日市场宽度</h3>
+                        <p>{{ latest_market_breadth_7d }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_market_breadth_30d is defined %}
+                    <div class="info-box">
+                        <h3>30日市场宽度</h3>
+                        <p>{{ latest_market_breadth_30d }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_market_breadth_90d is defined %}
+                    <div class="info-box">
+                        <h3>90日市场宽度</h3>
+                        <p>{{ latest_market_breadth_90d }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_market_breadth_365d is defined %}
+                    <div class="info-box">
+                        <h3>365日市场宽度</h3>
+                        <p>{{ latest_market_breadth_365d }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="info-box">
+                        <h3>计算原理</h3>
+                        <small>市场宽度指数 = 涨幅币种数量 - 跌幅币种数量，再进行归一化处理。指标反映市场整体多空力量对比，数值越高表示多方力量越强。</small>
+                    </div>
+                </div>
+                <div id="market_breadth_chart" class="chart">
+                    {{ market_breadth_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 基于均线的市场宽度面板 -->
+        {% if ma_breadth_chart is defined %}
+        <div id="ma_breadth" class="card">
+            <div class="card-header">
+                <h2>基于均线的市场宽度</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    {% if latest_ma20_breadth is defined %}
+                    <div class="info-box">
+                        <h3>MA20市场宽度</h3>
+                        <p>{{ latest_ma20_breadth }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_ma20_percentage is defined %}
+                    <div class="info-box">
+                        <h3>收盘价大于MA20比例</h3>
+                        <p>{{ latest_ma20_percentage }}</p>
+                        <small>比例越高，市场越强劲</small>
+                    </div>
+                    {% endif %}
+                    <div class="info-box">
+                        <h3>计算原理</h3>
+                        <small>统计各币种收盘价高于不同周期移动平均线的比例，反映市场中处于上升趋势的币种占比。比例越高表示市场整体趋势越强。</small>
+                    </div>
+                </div>
+                <div id="ma_breadth_chart" class="chart">
+                    {{ ma_breadth_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- AD百分比面板 -->
+        {% if ad_percentage_chart is defined %}
+        <div id="ad_percentage" class="card">
+            <div class="card-header">
+                <h2>AD百分比</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>AD百分比</h3>
+                        <p>{{ latest_ad_percentage }}</p>
+                        <small>小于-80超卖，大于80超买</small>
+                    </div>
+                    <div class="info-box">
+                        <h3>计算原理</h3>
+                        <small>AD百分比(Advance/Decline Percentage)是通过计算市场中上涨币种与下跌币种的累计差值，再进行归一化处理得到的指标。用于衡量市场的超买超卖状态，是市场宽度的累积版本。</small>
+                    </div>
+                </div>
+                <div id="ad_percentage_chart" class="chart">
+                    {{ ad_percentage_chart|safe }}
+                </div>
+            </div>
+        </div>
+        <!-- 涨跌比重面板 -->
+        {% if up_down_ratio_chart is defined %}
+        <div id="up_down_ratio" class="card">
+            <div class="card-header">
+                <h2>涨跌比重指标</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <!-- 指标说明 -->
+                <div class="indicator-description">
+                    <h3>指标原理</h3>
+                    <p>涨跌比重指标统计市场中不同涨跌幅区间的币种分布比重，分析市场情绪和资金分布。通过观察上涨、下跌和横盘币种的占比变化，可以判断市场的整体强弱和情绪扩散程度。</p>
+                    
+                    <h3>计算方法</h3>
+                    <ul>
+                        <li><strong>样本筛选</strong>：选取成交额排名前100的活跃币种</li>
+                        <li><strong>区间划分</strong>：按涨跌幅分为大涨(>10%)、中涨(5-10%)、小涨(1-5%)、横盘(-1%-1%)、小跌(-5%--1%)、中跌(-10%--5%)、大跌(<-10%)等7个区间</li>
+                        <li><strong>比重计算</strong>：统计各区间币种数量占总样本的百分比</li>
+                        <li><strong>涨跌比率</strong>：上涨币种总数 / 下跌币种总数</li>
+                    </ul>
+                    
+                    <h3>情绪判断标准</h3>
+                    <ul>
+                        <li><span class="signal-tag bullish">极度乐观</span>：大涨比重 > 30% 或上涨比重 > 70%</li>
+                        <li><span class="signal-tag optimistic">乐观</span>：上涨比重 60-70%</li>
+                        <li><span class="signal-tag neutral">平衡</span>：上涨比重 40-60%</li>
+                        <li><span class="signal-tag pessimistic">悲观</span>：上涨比重 30-40%</li>
+                        <li><span class="signal-tag bearish">极度悲观</span>：上涨比重 < 30% 或暴跌比重 > 20%</li>
+                    </ul>
+                    
+                    <h3>应用要点</h3>
+                    <ul>
+                        <li><strong>广度确认</strong>：价格上涨配合高上涨比重，确认趋势健康性</li>
+                        <li><strong>背离识别</strong>：价格新高但上涨比重下降，警示内部分化</li>
+                        <li><strong>情绪转折</strong>：极端比重出现时，往往是市场转折的先行信号</li>
+                        <li><strong>风险控制</strong>：暴跌比重急剧上升时，需要严格控制风险</li>
+                    </ul>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>涨幅比例</h3>
+                        <p>{{ latest_up_ratio }}</p>
+                    </div>
+                    <div class="info-box">
+                        <h3>跌幅比例</h3>
+                        <p>{{ latest_down_ratio }}</p>
+                    </div>
+                </div>
+                <div class="chart-row">
+                    <div id="up_down_ratio_chart" class="chart" style="width: 55%;">
+                        {{ up_down_ratio_chart|safe }}
+                    </div>
+                    <div id="up_down_pie_chart" class="chart" style="width: 45%; height: 700px;">
+                        {{ up_down_pie_chart|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 爆拉暴跌币种占比面板 -->
+        {% if extreme_move_chart is defined %}
+        <div id="extreme_move" class="card">
+            <div class="card-header">
+                <h2>爆拉暴跌币种占比</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>爆拉币种占比</h3>
+                        <p>{{ latest_extreme_up_ratio }}</p>
+                        <small>日涨幅超过20%的币种占比</small>
+                    </div>
+                    <div class="info-box">
+                        <h3>暴跌币种占比</h3>
+                        <p>{{ latest_extreme_down_ratio }}</p>
+                        <small>日跌幅超过20%的币种占比</small>
+                    </div>
+                    <div class="info-box">
+                        <h3>计算原理</h3>
+                        <small>统计每日涨幅超过20%和跌幅超过20%的币种占总币种数量的比例，反映市场极端情绪和波动程度</small>
+                    </div>
+                </div>
+                <div id="extreme_move_chart" class="chart">
+                    {{ extreme_move_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 山寨币指数面板 -->
+        {% if altcoin_season_chart is defined %}
+        <div id="altcoin_season" class="card">
+            <div class="card-header">
+                <h2>山寨币指数</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    {% if latest_altcoin_month is defined %}
+                    <div class="info-box">
+                        <h3>月度指数</h3>
+                        <p>{{ latest_altcoin_month }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_altcoin_season is defined %}
+                    <div class="info-box">
+                        <h3>季度指数</h3>
+                        <p>{{ latest_altcoin_season }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_altcoin_year is defined %}
+                    <div class="info-box">
+                        <h3>年度指数</h3>
+                        <p>{{ latest_altcoin_year }}</p>
+                        <small>大于75为山寨季，小于25为比特币季</small>
+                    </div>
+                    {% endif %}
+                </div>
+                <div id="altcoin_season_chart" class="chart">
+                    {{ altcoin_season_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- ahr999指标面板 -->
+        {% if ahr999_chart is defined %}
+        <div id="ahr999" class="card">
+            <div class="card-header">
+                <h2>ahr999指标</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>当前指数</h3>
+                        <p>{{ latest_ahr999 }}</p>
+                        <small>定投线: 1.2，抄底线: 0.45</small>
+                    </div>
+                    {% if latest_btc_price is defined %}
+                    <div class="info-box">
+                        <h3>BTC价格</h3>
+                        <p>${{ latest_btc_price }}</p>
+                    </div>
+                    {% endif %}
+                    {% if latest_model_price is defined %}
+                    <div class="info-box">
+                        <h3>指数增长估值</h3>
+                        <p>${{ latest_model_price }}</p>
+                        <small>基于比特币价格和币龄拟合</small>
+                    </div>
+                    {% endif %}
+                    {% if latest_ma200_price is defined %}
+                    <div class="info-box">
+                        <h3>200日定投成本</h3>
+                        <p>${{ latest_ma200_price }}</p>
+                        <small>过去200天内每日定投的平均成本</small>
+                    </div>
+                    {% endif %}
+                </div>
+                <div id="ahr999_chart" class="chart">
+                    {{ ahr999_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 横截面差异指数面板 -->
+        {% if cross_section_diff_chart is defined %}
+        <div id="cross_section_diff" class="card">
+            <div class="card-header">
+                <h2>横截面差异指数</h2>
+                <div class="toggle-icon"></div>
+            </div>
+            <div class="card-body">
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>当前指数</h3>
+                        <p>{{ latest_cross_section_diff }}</p>
+                        <small>判定线基于数据分布动态计算，一般为中位数±标准差</small>
+                    </div>
+                    <div class="info-box">
+                        <h3>计算原理</h3>
+                        <small>
+                            横截面差异指数 = (涨跌幅top5中位数 - 涨跌幅bottom5中位数) * 0.5 + (涨跌幅top10均值 - 涨跌幅bottom10均值) * 0.5<br>
+                            基于现货币种的日收益率计算，反映市场中不同币种表现的差异程度，可用于评估中性策略的盈利空间
+                        </small>
+                    </div>
+                </div>
+                <div id="cross_section_diff_chart" class="chart" style="height: 550px;">
+                    {{ cross_section_diff_chart|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="footer">
+            <p>数据更新时间：{{ latest_time }} | 自动刷新间隔：5分钟</p>
+        </div>
+    </div>
+    
+    <script>
+        // 添加自动刷新
+        setTimeout(function() {
+            window.location.reload();
+        }, 300000);  // 每5分钟刷新一次页面
+        
+        // 折叠卡片功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', function() {
+                    // 先移除所有卡片的高亮状态
+                    cards.forEach(c => c.classList.remove('highlight-card'));
+                    
+                    card.classList.toggle('active');
+                    
+                    // 如果卡片被激活，添加高亮边框效果
+                    if (card.classList.contains('active')) {
+                        card.classList.add('highlight-card');
+                        
+                        // 延迟执行图表重绘，确保卡片已完全展开
+                        setTimeout(() => {
+                            const chartDivs = card.querySelectorAll('.chart');
+                            chartDivs.forEach(chartDiv => {
+                                const chartInstance = echarts.getInstanceByDom(chartDiv);
+                                if (chartInstance) {
+                                    chartInstance.resize();
+                                }
+                            });
+                        }, 500);
+                    }
+                });
+            });
+            
+            // 处理URL锚点，自动展开对应卡片
+            if (window.location.hash) {
+                const targetId = window.location.hash.substring(1);
+                const targetCard = document.getElementById(targetId);
+                if (targetCard) {
+                    // 移除所有卡片的高亮状态
+                    cards.forEach(c => c.classList.remove('highlight-card'));
+                    
+                    targetCard.classList.add('active', 'highlight-card');
+                    targetCard.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // 延迟一下再重新渲染图表
+                    setTimeout(() => {
+                        const chartDivs = targetCard.querySelectorAll('.chart');
+                        chartDivs.forEach(chartDiv => {
+                            const chartInstance = echarts.getInstanceByDom(chartDiv);
+                            if (chartInstance) {
+                                chartInstance.resize();
+                            }
+                        });
+                    }, 800); // 增加延迟时间
+                }
+            }
+            
+            // 监听窗口大小变化，自动调整所有已展开卡片中的图表
+            window.addEventListener('resize', function() {
+                const activeCards = document.querySelectorAll('.card.active');
+                activeCards.forEach(card => {
+                    const chartDivs = card.querySelectorAll('.chart');
+                    chartDivs.forEach(chartDiv => {
+                        const chartInstance = echarts.getInstanceByDom(chartDiv);
+                        if (chartInstance) {
+                            chartInstance.resize();
+                        }
+                    });
+                });
+            });
+            
+            // 波动率选项卡切换功能
+            const tabItems = document.querySelectorAll('.volatility-tabs .tab-item');
+            tabItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除所有选项卡的激活状态
+                    tabItems.forEach(tab => tab.classList.remove('active'));
+                    // 激活当前选项卡
+                    this.classList.add('active');
+                    
+                    // 获取目标面板ID
+                    const targetId = this.getAttribute('data-target');
+                    
+                    // 隐藏所有面板
+                    const tabPanes = document.querySelectorAll('.volatility-tabs .tab-pane');
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    
+                    // 显示目标面板
+                    const targetPane = document.getElementById(targetId);
+                    if (targetPane) {
+                        targetPane.classList.add('active');
+                        
+                        // 重新渲染图表
+                        setTimeout(() => {
+                            const chartInstance = echarts.getInstanceByDom(targetPane);
+                            if (chartInstance) {
+                                chartInstance.resize();
+                            }
+                        }, 100);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+<style>
+/* 指标说明样式 */
+.indicator-description {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.indicator-description h3 {
+    color: #495057;
+    margin: 15px 0 10px 0;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+    display: inline-block;
+}
+
+.indicator-description ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.indicator-description li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+/* 信号标签样式 */
+.signal-tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 5px;
+}
+
+.signal-tag.bullish {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.signal-tag.optimistic {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.signal-tag.neutral {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.signal-tag.pessimistic {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.signal-tag.bearish {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>

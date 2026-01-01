@@ -1,0 +1,303 @@
+{
+  "_comment": "统一推送系统配置文件模板",
+  "_description": "请根据实际需求修改以下配置项",
+  
+  "system": {
+    "name": "统一推送系统",
+    "version": "1.0.0",
+    "debug": false,
+    "log_level": "INFO",
+    "max_concurrent_tasks": 10,
+    "task_timeout": 300,
+    "retry_attempts": 3,
+    "retry_delay": 5
+  },
+  
+  "database": {
+    "type": "sqlite",
+    "path": "push_system.db",
+    "backup_enabled": true,
+    "backup_interval": 86400,
+    "cleanup_days": 30
+  },
+  
+  "platforms": {
+    "dingtalk": {
+      "enabled": true,
+      "webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=YOUR_TOKEN",
+      "secret": "YOUR_SECRET",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "rate_limit": {
+        "enabled": true,
+        "max_requests": 20,
+        "time_window": 60
+      },
+      "features": {
+        "supports_markdown": true,
+        "supports_images": true,
+        "supports_at_all": true,
+        "supports_at_mobile": true,
+        "max_content_length": 20000
+      }
+    },
+    
+    "wechat": {
+      "enabled": true,
+      "webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "rate_limit": {
+        "enabled": true,
+        "max_requests": 20,
+        "time_window": 60
+      },
+      "features": {
+        "supports_markdown": true,
+        "supports_images": true,
+        "supports_mentions": false,
+        "max_content_length": 2048
+      }
+    },
+    
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "username": "your_email@gmail.com",
+      "password": "your_app_password",
+      "use_tls": true,
+      "from_name": "推送系统",
+      "default_recipients": [
+        "recipient1@example.com",
+        "recipient2@example.com"
+      ],
+      "timeout": 60,
+      "retry_attempts": 2,
+      "features": {
+        "supports_html": true,
+        "supports_attachments": true,
+        "max_attachment_size": 25000000
+      }
+    },
+    
+    "webhook": {
+      "enabled": false,
+      "endpoints": [
+        {
+          "name": "custom_webhook_1",
+          "url": "https://your-webhook-endpoint.com/notify",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer YOUR_TOKEN"
+          },
+          "timeout": 30,
+          "retry_attempts": 2
+        }
+      ]
+    }
+  },
+  
+  "content_optimization": {
+    "enabled": true,
+    "templates": {
+      "market_alert": {
+        "title_template": "📈 {symbol} 价格提醒",
+        "content_template": "当前价格: ${price}\n涨跌幅: {change}%\n时间: {timestamp}",
+        "priority": "high"
+      },
+      "system_notification": {
+        "title_template": "🔔 系统通知",
+        "content_template": "{message}\n\n时间: {timestamp}",
+        "priority": "medium"
+      },
+      "daily_report": {
+        "title_template": "📊 每日报告 - {date}",
+        "content_template": "今日概况:\n{summary}\n\n详细数据请查看附件。",
+        "priority": "low"
+      }
+    },
+    "auto_formatting": {
+      "enabled": true,
+      "add_timestamps": true,
+      "format_numbers": true,
+      "truncate_long_content": true,
+      "max_content_length": 1000
+    }
+  },
+  
+  "image_processing": {
+    "enabled": true,
+    "compression": {
+      "enabled": true,
+      "quality": 85,
+      "max_width": 1920,
+      "max_height": 1080,
+      "max_file_size": 5000000
+    },
+    "thumbnail": {
+      "enabled": true,
+      "size": [300, 200],
+      "quality": 75
+    },
+    "formats": {
+      "supported": ["jpg", "jpeg", "png", "gif", "webp"],
+      "convert_to": "jpg"
+    },
+    "storage": {
+      "local_path": "./images",
+      "cleanup_after_send": false,
+      "max_storage_days": 7
+    }
+  },
+  
+  "frequency_control": {
+    "enabled": true,
+    "global_limits": {
+      "max_per_minute": 10,
+      "max_per_hour": 100,
+      "max_per_day": 1000
+    },
+    "platform_limits": {
+      "dingtalk": {
+        "max_per_minute": 5,
+        "max_per_hour": 50
+      },
+      "wechat": {
+        "max_per_minute": 5,
+        "max_per_hour": 50
+      },
+      "email": {
+        "max_per_minute": 2,
+        "max_per_hour": 20
+      }
+    },
+    "content_deduplication": {
+      "enabled": true,
+      "time_window": 300,
+      "similarity_threshold": 0.8
+    }
+  },
+  
+  "scheduling": {
+    "enabled": true,
+    "timezone": "Asia/Shanghai",
+    "max_scheduled_tasks": 1000,
+    "cleanup_completed_tasks": true,
+    "task_retention_days": 7,
+    "batch_processing": {
+      "enabled": true,
+      "batch_size": 10,
+      "batch_interval": 5
+    }
+  },
+  
+  "monitoring": {
+    "enabled": true,
+    "metrics": {
+      "collect_performance": true,
+      "collect_errors": true,
+      "collect_usage": true,
+      "retention_days": 30
+    },
+    "alerts": {
+      "enabled": true,
+      "error_threshold": 5,
+      "response_time_threshold": 10,
+      "success_rate_threshold": 0.9
+    },
+    "health_check": {
+      "enabled": true,
+      "interval": 60,
+      "timeout": 10
+    }
+  },
+  
+  "web_interface": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 5000,
+    "debug": false,
+    "auth": {
+      "enabled": false,
+      "username": "admin",
+      "password": "admin123"
+    },
+    "features": {
+      "real_time_status": true,
+      "push_history": true,
+      "statistics_charts": true,
+      "content_preview": true,
+      "manual_push": true
+    },
+    "ui": {
+      "theme": "light",
+      "language": "zh-CN",
+      "auto_refresh": true,
+      "refresh_interval": 5,
+      "page_size": 20
+    }
+  },
+  
+  "security": {
+    "api_keys": {
+      "encryption_enabled": true,
+      "rotation_enabled": false,
+      "rotation_days": 90
+    },
+    "request_validation": {
+      "enabled": true,
+      "max_content_length": 100000,
+      "allowed_file_types": ["jpg", "jpeg", "png", "gif", "pdf"],
+      "max_file_size": 10000000
+    },
+    "logging": {
+      "log_requests": true,
+      "log_responses": false,
+      "mask_sensitive_data": true
+    }
+  },
+  
+  "performance": {
+    "caching": {
+      "enabled": true,
+      "cache_size": 1000,
+      "cache_ttl": 300
+    },
+    "connection_pooling": {
+      "enabled": true,
+      "max_connections": 20,
+      "connection_timeout": 30
+    },
+    "async_processing": {
+      "enabled": true,
+      "worker_threads": 4,
+      "queue_size": 1000
+    }
+  },
+  
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "retention_days": 30,
+    "backup_path": "./backups",
+    "compress": true,
+    "include_images": false
+  },
+  
+  "development": {
+    "mock_mode": false,
+    "test_endpoints": {
+      "enabled": false,
+      "dingtalk_test": "https://httpbin.org/post",
+      "wechat_test": "https://httpbin.org/post"
+    },
+    "debug_logging": {
+      "enabled": false,
+      "log_requests": true,
+      "log_responses": true,
+      "log_file": "debug.log"
+    }
+  }
+}

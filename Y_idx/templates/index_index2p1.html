@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y指数监控面板 - 首页</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 现代化全局样式 */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #00d4aa;
+            --warning-color: #ffb946;
+            --danger-color: #ff6b6b;
+            --info-color: #4facfe;
+            --dark-color: #2c3e50;
+            --light-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #1a202c;
+            --text-secondary: #718096;
+            --text-muted: #a0aec0;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --border-radius-sm: 6px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+            
+            --transition-fast: all 0.15s ease;
+            --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #fff, #e3f2fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--border-radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* 主要内容区域 */
+        .main-content {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .welcome-description {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 快速导航卡片 */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .nav-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transition: var(--transition-normal);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .nav-card-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-gradient);
+            border-radius: var(--border-radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-card-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* 系统状态区域 */
+        .status-section {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 3rem;
+        }
+
+        .status-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--light-color);
+            border-radius: var(--border-radius-md);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.warning {
+            background: var(--warning-color);
+        }
+
+        .status-indicator.error {
+            background: var(--danger-color);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        /* 页脚样式 */
+        .footer {
+            background: var(--dark-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .footer-info {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h1>Y指数监控系统</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="main-content">
+        <!-- 欢迎区域 -->
+        <section class="welcome-section">
+            <h2 class="welcome-title">欢迎使用Y指数监控系统</h2>
+            <p class="welcome-description">
+                专业的加密货币市场分析工具，提供实时数据监控、技术指标分析和市场趋势预测。
+            </p>
+        </section>
+
+        <!-- 快速导航 -->
+        <section class="nav-grid">
+            <a href="/index2p1" class="nav-card">
+                <div class="nav-card-icon">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h3 class="nav-card-title">专业监控面板</h3>
+                <p class="nav-card-description">
+                    查看完整的市场数据、技术指标和实时图表分析
+                </p>
+            </a>
+
+            <a href="/data" class="nav-card">
+                <div class="nav-card-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h3 class="nav-card-title">数据中心</h3>
+                <p class="nav-card-description">
+                    访问历史数据、导出报告和数据分析工具
+                </p>
+            </a>
+
+            <a href="/settings" class="nav-card">
+                <div class="nav-card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3 class="nav-card-title">系统设置</h3>
+                <p class="nav-card-description">
+                    配置监控参数、通知设置和系统偏好
+                </p>
+            </a>
+
+            <a href="/api" class="nav-card">
+                <div class="nav-card-icon">
+                    <i class="fas fa-code"></i>
+                </div>
+                <h3 class="nav-card-title">API接口</h3>
+                <p class="nav-card-description">
+                    开发者接口文档和数据API访问
+                </p>
+            </a>
+        </section>
+
+        <!-- 系统状态 -->
+        <section class="status-section">
+            <h3 class="status-title">
+                <i class="fas fa-heartbeat"></i>
+                系统状态
+            </h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">数据服务正常</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">API服务正常</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">监控服务正常</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">数据库连接正常</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                © 2024 Y指数监控系统. 版本 v2.1 - 专业加密货币市场分析工具
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * 页面初始化函数
+         */
+        function initializePage() {
+            console.log('Y指数监控系统首页已加载');
+            
+            // 检查系统状态
+            checkSystemStatus();
+            
+            // 设置定时检查
+            setInterval(checkSystemStatus, 30000); // 每30秒检查一次
+        }
+
+        /**
+         * 检查系统状态
+         */
+        function checkSystemStatus() {
+            // 模拟系统状态检查
+            const statusItems = document.querySelectorAll('.status-indicator');
+            
+            statusItems.forEach((indicator, index) => {
+                // 模拟随机状态（实际应该调用API）
+                const isHealthy = Math.random() > 0.1; // 90%概率正常
+                
+                if (isHealthy) {
+                    indicator.className = 'status-indicator';
+                } else {
+                    indicator.className = 'status-indicator warning';
+                }
+            });
+        }
+
+        /**
+         * 页面加载完成后初始化
+         */
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>

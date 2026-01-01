@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>数据订阅 | Y 指数看板</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 颜色变量（可与 index2p1.html 的主题变量映射） */
+        :root{
+            --primary:#4361ee;
+            --secondary:#06d6a0;
+            --accent:#118ab2;
+            --background:#f5f7fb;
+            --card:#ffffff;
+            --text:#2c3e50;
+            --muted:#657786;
+            --border:#e9ecef;
+            --warning:#ffd166;
+            --danger:#f72585;
+            --success:#2ecc71;
+            --shadow:0 8px 24px rgba(0,0,0,0.08);
+            --shadow-soft:0 2px 10px rgba(0,0,0,0.08);
+            --gradient:linear-gradient(135deg, #4361ee 0%, #118ab2 100%);
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;
+            background:var(--background); color:var(--text);
+        }
+
+        /* 布局 */
+        .layout{display:grid; grid-template-columns: 240px 1fr; min-height:100vh}
+        .sidebar{
+            background:#0f172a; color:#cbd5e1; padding:16px 12px; position:sticky; top:0; height:100vh;
+        }
+        .logo{display:flex; align-items:center; gap:8px; color:#e2e8f0; font-weight:700; letter-spacing:.5px; margin:4px 8px 16px;}
+        .nav{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+        .nav a{
+            display:flex; align-items:center; gap:10px; padding:8px 12px; color:#cbd5e1; text-decoration:none; border-radius:10px;
+        }
+        .nav a:hover{background:rgba(255,255,255,.06); color:#fff}
+        .nav a.active{background:linear-gradient(90deg, rgba(67,97,238,.2), rgba(17,138,178,.15)); color:#fff; border:1px solid rgba(67,97,238,.35)}
+        .main{padding:24px 28px}
+
+        /* 头部与工具条 */
+        .breadcrumb{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px}
+        .page-title{display:flex; align-items:center; justify-content:space-between; margin:10px 0 18px}
+        .page-title h1{margin:0; font-size:20px}
+        .toolbar{
+            display:grid; gap:12px; grid-template-columns: auto 1fr auto auto; align-items:center;
+            background:var(--card); padding:14px; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-soft);
+        }
+        .btn{
+            display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border);
+            background:#fff; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; transition:.2s;
+        }
+        .btn i{font-size:14px}
+        .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow-soft)}
+        .btn.primary{background:var(--primary); border-color:transparent; color:#fff}
+        .btn.success{background:var(--success); border-color:transparent; color:#fff}
+        .btn.warning{background:var(--warning); border-color:transparent; color:#000}
+        .btn.icon{padding:10px}
+
+        .path-input{
+            display:flex; align-items:center; gap:8px; width:100%;
+            background:#fff; border:1px solid var(--border); border-radius:12px; padding:8px 10px;
+        }
+        .path-input input{
+            border:none; outline:none; width:100%; font-size:14px; color:var(--muted);
+        }
+        .modes{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:6px 10px}
+        .modes label{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted)}
+        .search{
+            display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:8px 10px; width:260px;
+        }
+        .search input{border:none; outline:none; width:100%}
+
+        /* 标签栏 */
+        .tabs{display:flex; gap:8px; margin:16px 0}
+        .tab{padding:8px 12px; border-radius:10px; background:#fff; border:1px solid var(--border); font-size:13px; color:var(--muted); cursor:pointer}
+        .tab.active,.tab:hover{color:#111; border-color:#cbd5e1}
+
+        /* 表格卡片 */
+        .card{
+            background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); overflow:hidden
+        }
+        table{width:100%; border-collapse:separate; border-spacing:0}
+        thead th{
+            text-align:left; font-weight:600; color:#475569; padding:14px; font-size:13px; background:#f8fafc; border-bottom:1px solid var(--border)
+        }
+        tbody td{padding:14px; border-bottom:1px solid var(--border); color:#1f2937; font-size:14px}
+        tbody tr:hover{background:#fafafa}
+        .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#fff}
+        .chip.green{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.08); color:#166534}
+        .chip.gray{color:#475569}
+        .menu{color:#64748b; cursor:pointer}
+        .help{padding:16px 18px; color:#475569; line-height:1.75}
+        .help h3{margin:10px 0 6px; font-size:15px}
+        .help ul{margin:6px 0 14px 18px}
+        .help li{margin:5px 0}
+
+        /* 底部状态条 */
+        .status-bar{
+            display:flex; justify-content:space-between; align-items:center; gap:10px;
+            background:#0b1220; color:#cbd5e1; padding:8px 14px; border-top:1px solid rgba(255,255,255,.08); position:sticky; bottom:0; margin-top:16px; border-radius:12px;
+        }
+        .status-l, .status-r{display:flex; align-items:center; gap:12px; font-size:12px}
+        .dot{width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+        .toast{position:fixed; right:16px; bottom:16px; background:#111827; color:#f9fafb; padding:10px 14px; border-radius:10px; box-shadow:var(--shadow); opacity:0; transform:translateY(12px); transition:.25s}
+        .toast.show{opacity:1; transform:translateY(0)}
+        @media (max-width: 1100px){
+            .layout{grid-template-columns: 1fr}
+            .sidebar{position:static; height:auto; border-bottom:1px solid rgba(255,255,255,.08)}
+            .toolbar{grid-template-columns: 1fr; gap:10px}
+            .search{width:100%}
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="logo"><i class="fa-solid fa-chart-line"></i> Y 指数·数据中心</div>
+        <nav class="nav">
+            <a href="/" title="首页"><i class="fa-solid fa-house"></i> 首页</a>
+            <a href="#" class="active" title="数据订阅"><i class="fa-solid fa-database"></i> 数据订阅</a>
+            <a href="#" title="数据视图"><i class="fa-solid fa-chart-pie"></i> 数据视图</a>
+            <a href="#" title="指标仓库"><i class="fa-solid fa-box-archive"></i> 指标仓库</a>
+            <a href="#" title="回测"><i class="fa-solid fa-rotate-left"></i> 回测</a>
+            <a href="#" title="团队协作"><i class="fa-solid fa-users"></i> 团队协作</a>
+            <a href="#" title="设置"><i class="fa-solid fa-gear"></i> 设置</a>
+        </nav>
+    </aside>
+
+    <!-- 主区域 -->
+    <main class="main">
+        <div class="breadcrumb"><span>数据中心</span><i class="fa-solid fa-angle-right"></i><span>数据订阅</span></div>
+        <div class="page-title">
+            <h1>数据订阅</h1>
+            <span style="color:#64748b;font-size:12px">每日自动检查并更新 · 最近 24 小时</span>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <button class="btn primary" id="btnSubscribe"><i class="fa-solid fa-play"></i> 订阅数据</button>
+            <div class="path-input">
+                <i class="fa-solid fa-folder"></i>
+                <input id="pathInput" value="E:\\\\策略\\\\position-mgmt_v1.3.5..." />
+                <button class="btn icon" title="更改目录"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn icon" id="btnOpenDir" title="打开数据文件夹"><i class="fa-solid fa-folder-open"></i></button>
+            </div>
+            <div class="modes" id="modeGroup" role="radiogroup" aria-label="性能模式">
+                <label><input type="radio" name="mode" value="eco"> 节能</label>
+                <label><input type="radio" name="mode" value="balance" checked> 均衡</label>
+                <label><input type="radio" name="mode" value="performance"> 性能</label>
+            </div>
+            <div class="search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="searchInput" placeholder="请输入搜索内容..." />
+            </div>
+        </div>
+
+        <!-- 标签 -->
+        <div class="tabs">
+            <div class="tab active" id="tabData">订阅数据</div>
+            <div class="tab" id="tabRefresh">刷新列表</div>
+            <div class="tab" id="tabCheck">检测更新</div>
+            <div class="tab" id="tabMore">更多</div>
+        </div>
+
+        <!-- 数据表 -->
+        <section class="card">
+            <table id="tbl">
+                <thead>
+                    <tr>
+                        <th style="width:32%">数据名称</th>
+                        <th style="width:34%">产品名称</th>
+                        <th style="width:14%">数据更新至</th>
+                        <th style="width:14%">数据更新时间</th>
+                        <th style="width:6%; text-align:right">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+                    <!-- JS 渲染 -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 帮助区 -->
+        <section class="card" style="margin-top:14px">
+            <div class="help">
+                <h3>数据订阅名词解释</h3>
+                <ul>
+                    <li><strong>数据来源：</strong> 本站数据商城。</li>
+                    <li><strong>数据覆盖：</strong> 近三年历史数据并每日自动补齐。</li>
+                    <li><strong>数据目录：</strong> 在“目录输入框”中配置，默认使用程序 data 目录。</li>
+                </ul>
+                <h3>数据更新的逻辑</h3>
+                <ul>
+                    <li>每日 09:30 自动检查增量，若有缺口则拉取补全。</li>
+                    <li>如遇网络异常或供应侧失败，将在 1 小时内自动重试，最多 3 次。</li>
+                    <li>本地缺失数据分段补齐，避免重复下载，系统自动处理，无需手动。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 底部状态条 -->
+        <div class="status-bar">
+            <div class="status-l">
+                <span class="dot"></span>
+                <span>系统就绪</span>
+            </div>
+            <div class="status-r">
+                <span>极化小讲堂 v3.3.1</span>
+                <span>模式：<b id="modeText">均衡</b></span>
+                <span id="countText">共 0 项</span>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast" id="toast">已完成</div>
+
+<script>
+/**
+ * 渲染提示气泡
+ * @param {string} msg 文本
+ */
+function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg || '已完成';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+/**
+ * 获取性能模式（读取 localStorage）
+ * @returns {'eco'|'balance'|'performance'}
+ */
+function getMode(){
+    return localStorage.getItem('ds_mode') || 'balance';
+}
+
+/**
+ * 设置性能模式（写入 localStorage 并同步 UI）
+ * @param {'eco'|'balance'|'performance'} mode 
+ */
+function setMode(mode){
+    localStorage.setItem('ds_mode', mode);
+    document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = (r.value === mode));
+    document.getElementById('modeText').textContent = mode === 'eco' ? '节能' : (mode === 'performance' ? '性能' : '均衡');
+}
+
+/**
+ * 全局数据列表（由接口填充）
+ * @type {Array<{name:string,product:string,dataTo:string,updateAt:string,rows:number,size:string}>}
+ */
+let rows = [];
+
+/**
+ * 拉取后端订阅数据
+ * @returns {Promise<Array>}
+ */
+async function fetchSubscriptions(){
+    const res = await fetch('/api/subscriptions');
+    const json = await res.json();
+    if(json.status !== 'success'){
+        showToast('获取数据失败：' + (json.message || '未知错误'));
+        return [];
+    }
+    // 组装表格字段
+    return (json.items || []).map(it => ({
+        name: it.display_name,
+        product: it.product_name,
+        dataTo: it.data_to || '-',
+        updateAt: it.update_at,
+        rows: it.rows,
+        size: it.size
+    }));
+}
+
+/**
+ * 按关键字过滤数据
+ * @param {string} kw 关键字
+ * @returns {Array} 过滤后的数据
+ */
+function filterRows(kw){
+    if(!kw) return rows;
+    const k = kw.toLowerCase();
+    return rows.filter(r => (r.name + r.product).toLowerCase().includes(k));
+}
+
+/**
+ * 渲染表格
+ * @param {Array} list 数据列表
+ */
+function renderTable(list){
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = list.map(r => `
+        <tr>
+            <td>
+                <div class="chip green" title="行数：${r.rows}，体积：${r.size}">
+                    <i class="fa-solid fa-database"></i> ${r.name}
+                </div>
+            </td>
+            <td><span class="chip gray"><i class="fa-solid fa-box"></i> ${r.product}</span></td>
+            <td>${r.dataTo || '-'}</td>
+            <td>${r.updateAt}</td>
+            <td style="text-align:right"><i class="fa-solid fa-ellipsis-vertical menu"></i></td>
+        </tr>
+    `).join('');
+    document.getElementById('countText').textContent = '共 ' + list.length + ' 项';
+}
+
+/**
+ * 绑定交互事件
+ */
+function bindEvents(){
+    // 搜索
+    document.getElementById('searchInput').addEventListener('input', (e)=>{
+        renderTable(filterRows(e.target.value));
+    });
+
+    // 性能模式切换
+    document.querySelectorAll('input[name="mode"]').forEach(r=>{
+        r.addEventListener('change', ()=> setMode(r.value));
+    });
+
+    // 订阅数据（示例）
+    document.getElementById('btnSubscribe').addEventListener('click', ()=>{
+        showToast('已提交订阅任务（示例）');
+    });
+
+    // 打开数据目录（调用后端接口）
+    document.getElementById('btnOpenDir').addEventListener('click', async ()=>{
+        try{
+            const res = await fetch('/api/open-data-folder');
+            const json = await res.json();
+            if(json && json.status === 'success'){
+                showToast('已尝试在服务器上打开数据目录');
+            }else{
+                showToast('打开目录失败：' + (json.message || '未知错误'));
+            }
+        }catch(err){
+            showToast('请求失败：' + err.message);
+        }
+    });
+
+    // 标签点击（示例）
+    document.getElementById('tabRefresh').addEventListener('click', async ()=>{
+        showToast('刷新中...');
+        rows = await fetchSubscriptions();
+        renderTable(rows);
+        showToast('刷新完成');
+    });
+    document.getElementById('tabCheck').addEventListener('click', ()=> showToast('检查更新完成（示例）'));
+}
+
+// 初始化（结合你的本地数据目录）
+(async function init(){
+    setMode(getMode());
+    rows = await fetchSubscriptions();
+    renderTable(rows);
+    bindEvents();
+})();
+</script>
+</body>
+</html>
