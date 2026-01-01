@@ -1,0 +1,2497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字货币市场监控面板 - Y指数</title>
+    <script src="https://cdn.bootcss.com/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #06d6a0;
+            --danger-color: #ef476f;
+            --warning-color: #ffd166;
+            --info-color: #118ab2;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #6c757d;
+            --text-tertiary: #adb5bd;
+            --border-color: #e9ecef;
+            --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --shadow-heavy: 0 12px 36px rgba(0, 0, 0, 0.12);
+            --border-radius: 16px;
+            --border-radius-small: 10px;
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f2f5 0%, #e6e9ef 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        /* 顶部导航栏 */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            padding: 12px 0;
+            transition: var(--transition);
+            box-shadow: var(--shadow-light);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .logo:hover {
+            transform: translateY(-2px);
+        }
+
+        .logo i {
+            font-size: 26px;
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 6px;
+            background: rgba(67, 97, 238, 0.08);
+            padding: 6px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 10px;
+            transition: var(--transition);
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.7s;
+        }
+
+        .nav-item:hover::before {
+            left: 100%;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(67, 97, 238, 0.15);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            color: white;
+            box-shadow: 0 4px 16px rgba(67, 97, 238, 0.3);
+        }
+
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            background: linear-gradient(135deg, rgba(6, 214, 160, 0.1), rgba(6, 214, 160, 0.05));
+            color: var(--secondary-color);
+            border: 1px solid rgba(6, 214, 160, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--secondary-color), #05c897);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(6, 214, 160, 0.4);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.1);
+                box-shadow: 0 0 0 6px rgba(6, 214, 160, 0);
+            }
+        }
+
+        .last-update {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 6px 12px;
+            background: rgba(142, 142, 147, 0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 主要内容区域 */
+        .main-container {
+            margin-top: 80px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 24px;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            margin-bottom: 24px;
+            overflow: hidden;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-medium);
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(17, 138, 178, 0.05));
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-title i {
+            color: var(--primary-color);
+            font-size: 22px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* 网格布局 */
+        .grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        /* 信息面板 */
+        .info-panel {
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.08), rgba(17, 138, 178, 0.08));
+            border-radius: var(--border-radius-small);
+            padding: 20px;
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid rgba(67, 97, 238, 0.1);
+        }
+
+        .info-panel:hover {
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.12), rgba(17, 138, 178, 0.12));
+            transform: translateY(-2px);
+        }
+
+        .info-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(67, 97, 238, 0.1);
+        }
+
+        .info-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 图表容器 */
+        .chart-container {
+            position: relative;
+            background: var(--card-background);
+            border-radius: var(--border-radius-small);
+            overflow: hidden;
+            aspect-ratio: 1;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .chart-container:hover {
+            box-shadow: var(--shadow-medium);
+            transform: translateY(-2px);
+        }
+
+        .chart {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* 时间选择器 */
+        .time-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: rgba(67, 97, 238, 0.05);
+            padding: 6px;
+            border-radius: 12px;
+            justify-content: center;
+        }
+
+        .time-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: var(--transition);
+        }
+
+        .time-btn:hover {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+        }
+
+        .time-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+        }
+
+        /* 市场情绪指标 */
+        .sentiment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .sentiment-card {
+            background: var(--card-background);
+            border-radius: var(--border-radius-small);
+            padding: 24px;
+            text-align: center;
+            box-shadow: var(--shadow-light);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sentiment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+        }
+
+        .sentiment-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .sentiment-gauge {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 16px;
+            position: relative;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #ef476f 0deg 72deg,
+                #ffd166 72deg 144deg,
+                #06d6a0 144deg 216deg,
+                #118ab2 216deg 288deg,
+                #4361ee 288deg 360deg
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: rotate 10s linear infinite;
+        }
+
+        .sentiment-gauge::before {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: var(--card-background);
+            border-radius: 50%;
+        }
+
+        .sentiment-value {
+            position: relative;
+            z-index: 1;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .sentiment-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .sentiment-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 图表放大模态框 */
+        .chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(8px);
+        }
+
+        .chart-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 1000px;
+            height: 80%;
+            background: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .chart-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .chart-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .chart-modal-close:hover {
+            background: rgba(239, 71, 111, 0.1);
+            color: var(--danger-color);
+        }
+
+        .chart-modal-body {
+            height: calc(100% - 80px);
+        }
+
+        /* 返回顶部按钮 */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: var(--shadow-medium);
+            transition: var(--transition);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 16px;
+            }
+
+            .nav-container {
+                padding: 0 16px;
+            }
+
+            .nav-menu {
+                gap: 4px;
+                padding: 4px;
+            }
+
+            .nav-item {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .card-body {
+                padding: 16px;
+            }
+
+            .chart-modal-content {
+                width: 95%;
+                height: 90%;
+                padding: 16px;
+            }
+
+            .sentiment-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 16px;
+            }
+
+            .sentiment-gauge {
+                width: 100px;
+                height: 100px;
+            }
+
+            .sentiment-gauge::before {
+                width: 70px;
+                height: 70px;
+            }
+        }
+
+        /* 特殊样式 */
+        .full-width-chart {
+            grid-column: 1 / -1;
+        }
+
+        .rainbow-table {
+            background: linear-gradient(135deg, 
+                #ff0000 0%, #ff8000 14%, #ffff00 28%, 
+                #80ff00 42%, #00ff00 56%, #00ff80 70%, 
+                #00ffff 84%, #0080ff 100%);
+            border-radius: var(--border-radius-small);
+            padding: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .altcoin-chart {
+            background: linear-gradient(135deg, rgba(255, 159, 10, 0.1), rgba(255, 69, 58, 0.1));
+        }
+
+        .cross-section-chart {
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(48, 176, 199, 0.1));
+        }
+
+        .ma-breadth-chart {
+            background: linear-gradient(135deg, rgba(175, 82, 222, 0.1), rgba(255, 45, 85, 0.1));
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="logo" onclick="scrollToTop()">
+                <i class="fas fa-chart-line"></i>
+                <span>Y指数监控</span>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item active" onclick="scrollToSection('overview')">概览</div>
+                <div class="nav-item" onclick="scrollToSection('value-indicators')">价值指标</div>
+                <div class="nav-item" onclick="scrollToSection('market-sentiment')">市场情绪</div>
+                <div class="nav-item" onclick="scrollToSection('technical-indicators')">技术指标</div>
+            </div>
+            
+            <div class="nav-status">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>实时连接</span>
+                </div>
+                <div class="last-update" id="lastUpdate">
+                    最后更新: <span id="updateTime">--</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="main-container">
+        <!-- 概览部分 -->
+        <section id="overview">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-tachometer-alt"></i>
+                        市场概览
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-4">
+                        <div class="info-panel">
+                            <div class="info-value" id="yIndexValue">--</div>
+                            <div class="info-label">Y指数</div>
+                        </div>
+                        <div class="info-panel">
+                            <div class="info-value" id="volatilityValue">--</div>
+                            <div class="info-label">市场波动率</div>
+                        </div>
+                        <div class="info-panel">
+                            <div class="info-value" id="liquidityValue">--</div>
+                            <div class="info-label">流动性指数</div>
+                        </div>
+                        <div class="info-panel">
+                            <div class="info-value" id="breadthValue">--</div>
+                            <div class="info-label">市场宽度</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Y指数走势图 -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-area"></i>
+                        Y指数走势图
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="time-selector">
+                        <button class="time-btn active" onclick="changeTimeFrame('y-index', '24h')">24H</button>
+                        <button class="time-btn" onclick="changeTimeFrame('y-index', '7d')">7D</button>
+                        <button class="time-btn" onclick="changeTimeFrame('y-index', '30d')">30D</button>
+                        <button class="time-btn" onclick="changeTimeFrame('y-index', '90d')">90D</button>
+                    </div>
+                    <div class="chart-container full-width-chart">
+                        <div id="yIndexChart" class="chart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主要指标图表 -->
+            <div class="grid grid-2">
+                <!-- 市场波动率 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-wave-square"></i>
+                            市场波动率
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="changeTimeFrame('volatility', '24h')">24H</button>
+                            <button class="time-btn" onclick="changeTimeFrame('volatility', '7d')">7D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('volatility', '30d')">30D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('volatility', '90d')">90D</button>
+                        </div>
+                        <div class="chart-container">
+                            <div id="volatilityChart" class="chart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 流动性指数 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-water"></i>
+                            流动性指数
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="changeTimeFrame('liquidity', '7d')">7D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('liquidity', '30d')">30D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('liquidity', '90d')">90D</button>
+                        </div>
+                        <div class="chart-container">
+                            <div id="liquidityChart" class="chart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 市场宽度指数 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                            市场宽度指数
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="changeTimeFrame('breadth', '24h')">24H</button>
+                            <button class="time-btn" onclick="changeTimeFrame('breadth', '7d')">7D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('breadth', '30d')">30D</button>
+                            <button class="time-btn" onclick="changeTimeFrame('breadth', '90d')">90D</button>
+                        </div>
+                        <div class="chart-container">
+                            <div id="breadthChart" class="chart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 山寨币指数 -->
+                <div class="card altcoin-chart">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-coins"></i>
+                            山寨币指数
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <div id="altcoinChart" class="chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 价值指标部分 -->
+        <section id="value-indicators">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-gem"></i>
+                        价值指标
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-2">
+                        <!-- BTC彩虹价表 -->
+                        <div class="card rainbow-table">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-rainbow"></i>
+                                    BTC彩虹价表
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <div id="btcRainbowChart" class="chart"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AHR999指标 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-calculator"></i>
+                                    AHR999指标
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <div id="ahr999Chart" class="chart"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 市场情绪部分 -->
+        <section id="market-sentiment">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-heart-pulse"></i>
+                        市场情绪指标
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="sentiment-grid">
+                        <div class="sentiment-card">
+                            <div class="sentiment-label">贪婪恐慌指数</div>
+                            <div class="sentiment-gauge">
+                                <div class="sentiment-value" id="fearGreedValue">--</div>
+                            </div>
+                            <div class="sentiment-status" id="fearGreedStatus">--</div>
+                        </div>
+                        
+                        <div class="sentiment-card">
+                            <div class="sentiment-label">市场热度</div>
+                            <div class="sentiment-gauge">
+                                <div class="sentiment-value" id="marketHeatValue">--</div>
+                            </div>
+                            <div class="sentiment-status" id="marketHeatStatus">--</div>
+                        </div>
+                        
+                        <div class="sentiment-card">
+                            <div class="sentiment-label">资金流向</div>
+                            <div class="sentiment-gauge">
+                                <div class="sentiment-value" id="moneyFlowValue">--</div>
+                            </div>
+                            <div class="sentiment-status" id="moneyFlowStatus">--</div>
+                        </div>
+                        
+                        <div class="sentiment-card">
+                            <div class="sentiment-label">投资者信心</div>
+                            <div class="sentiment-gauge">
+                                <div class="sentiment-value" id="confidenceValue">--</div>
+                            </div>
+                            <div class="sentiment-status" id="confidenceStatus">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 技术指标部分 -->
+        <section id="technical-indicators">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-line"></i>
+                        技术指标
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-2">
+                        <!-- 横截面差异指数 -->
+                        <div class="card cross-section-chart">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-project-diagram"></i>
+                                    横截面差异指数
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <div id="crossSectionChart" class="chart"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MA均线宽度 -->
+                        <div class="card ma-breadth-chart">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-signal"></i>
+                                    MA均线宽度
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <div id="maBreadthChart" class="chart"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 图表放大模态框 -->
+    <div id="chartModal" class="chart-modal">
+        <div class="chart-modal-content">
+            <div class="chart-modal-header">
+                <h3 class="chart-modal-title" id="modalTitle">图表详情</h3>
+                <button class="chart-modal-close" onclick="closeChartModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="chart-modal-body">
+                <div id="modalChart" style="width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- 页面底部信息 -->
+    <div style="text-align: center; padding: 40px 20px; color: var(--text-tertiary); font-size: 14px;">
+        <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+            数据更新频率: 实时 | 快捷键: Ctrl/Cmd + 数字键快速跳转 | 空格键暂停/恢复自动刷新
+        </p>
+        <p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.6;">
+            © 2024 Y指数监控面板 - 专业的数字货币市场分析工具
+        </p>
+    </div>
+
+    <script>
+        // 全局变量
+        let charts = {};
+        let currentTimeFrames = {
+            'y-index': '24h',
+            'volatility': '24h',
+            'liquidity': '7d',
+            'breadth': '24h'
+        };
+        let autoRefreshInterval;
+        let isAutoRefreshPaused = false;
+
+        /**
+         * 统一应用主题色到 ECharts 配置
+         * - 设置全局 option.color 为主题色
+         * - 为每个 series 自动分配颜色，并同步到 lineStyle 与 itemStyle，覆盖原有零散硬编码
+         * @param {Object} option - ECharts 配置项
+         * @returns {Object} 应用了主题色的配置项
+         */
+        const THEME_COLORS = [
+            '#2E86AB', '#4CAF50', '#A23B72', '#F18F01', '#17A2B8',
+            '#9C27B0', '#FF9800', '#607D8B', '#795548', '#E91E63'
+        ];
+        function applyThemeColors(option) {
+            const palette = THEME_COLORS;
+            option = { ...(option || {}) };
+            option.color = palette;
+
+            if (Array.isArray(option.series)) {
+                option.series = option.series.map((s, idx) => {
+                    const c = palette[idx % palette.length];
+                    const next = { ...s };
+                    next.itemStyle = { ...(next.itemStyle || {}), color: c };
+                    next.lineStyle = { ...(next.lineStyle || {}), color: c };
+                    return next;
+                });
+            }
+            return option;
+        }
+
+        // 页面加载完成后初始化
+        $(document).ready(function() {
+            initializePage();
+            startAutoRefresh();
+            initializeEventListeners();
+            updateTimestamp();
+        });
+
+        /**
+         * 初始化页面
+         */
+        function initializePage() {
+            // 初始化所有图表
+            initializeCharts();
+            
+            // 加载数据
+            loadAllData();
+            
+            // 显示返回顶部按钮
+            $(window).scroll(function() {
+                if ($(this).scrollTop() > 300) {
+                    $('#backToTop').addClass('show');
+                } else {
+                    $('#backToTop').removeClass('show');
+                }
+            });
+        }
+
+        /**
+         * 初始化所有图表
+         */
+        function initializeCharts() {
+            // Y指数图表
+            charts.yIndex = echarts.init(document.getElementById('yIndexChart'));
+            
+            // 波动率图表
+            charts.volatility = echarts.init(document.getElementById('volatilityChart'));
+            
+            // 流动性图表
+            charts.liquidity = echarts.init(document.getElementById('liquidityChart'));
+            
+            // 市场宽度图表
+            charts.breadth = echarts.init(document.getElementById('breadthChart'));
+            
+            // 山寨币指数图表
+            charts.altcoin = echarts.init(document.getElementById('altcoinChart'));
+            
+            // BTC彩虹价表图表
+            charts.btcRainbow = echarts.init(document.getElementById('btcRainbowChart'));
+            
+            // AHR999图表
+            charts.ahr999 = echarts.init(document.getElementById('ahr999Chart'));
+            
+            // 横截面差异指数图表
+            charts.crossSection = echarts.init(document.getElementById('crossSectionChart'));
+            
+            // MA均线宽度图表
+            charts.maBreadth = echarts.init(document.getElementById('maBreadthChart'));
+
+            // 为所有图表添加点击事件
+            Object.keys(charts).forEach(key => {
+                charts[key].on('click', function() {
+                    openChartModal(key);
+                });
+            });
+
+            // 窗口大小改变时重新调整图表
+            window.addEventListener('resize', function() {
+                Object.values(charts).forEach(chart => {
+                    chart.resize();
+                });
+            });
+        }
+
+        /**
+         * 加载所有数据
+         */
+        function loadAllData() {
+            // 模拟数据加载
+            loadYIndexData();
+            loadVolatilityData();
+            loadLiquidityData();
+            loadMarketBreadthData();
+            loadAltcoinData();
+            loadBTCRainbowData();
+            loadAHR999Data();
+            loadCrossSectionData();
+            loadMABreadthData();
+            loadSentimentData();
+            updateOverviewValues();
+        }
+
+        /**
+         * 加载Y指数数据
+         */
+        function loadYIndexData() {
+            // 生成模拟数据
+            const dates = generateDateRange(currentTimeFrames['y-index']);
+            const values = generateYIndexValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: 'Y指数走势',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#4361ee',
+                    borderWidth: 1,
+                    textStyle: {
+                        color: '#333'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: -100,
+                    max: 400,
+                    splitLine: {
+                        lineStyle: {
+                            color: '#e9ecef'
+                        }
+                    }
+                },
+                visualMap: {
+                    show: false,
+                    pieces: [
+                        {min: 200, max: 400, color: '#ef476f'},
+                        {min: 100, max: 200, color: '#ffd166'},
+                        {min: 0, max: 100, color: '#06d6a0'},
+                        {min: -100, max: 0, color: '#118ab2'}
+                    ],
+                    outOfRange: {
+                        color: '#999'
+                    }
+                },
+                series: [{
+                    name: 'Y指数',
+                    type: 'line',
+                    data: values,
+                    smooth: true,
+                    lineStyle: {
+                        width: 3
+                    },
+                    itemStyle: {
+                        borderWidth: 2
+                    },
+                    markLine: {
+                        data: [
+                            {yAxis: 200, name: '高风险线', lineStyle: {color: '#ef476f', width: 2}},
+                            {yAxis: 100, name: '中风险线', lineStyle: {color: '#ffd166', width: 2}},
+                            {yAxis: 0, name: '低风险线', lineStyle: {color: '#06d6a0', width: 2}}
+                        ]
+                    }
+                }]
+            };
+            
+            charts.yIndex.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载波动率数据
+         */
+        function loadVolatilityData() {
+            const dates = generateDateRange(currentTimeFrames['volatility']);
+            const values7d = generateVolatilityValues(dates.length, 0.3, 0.8);
+            const values30d = generateVolatilityValues(dates.length, 0.2, 0.6);
+            const values90d = generateVolatilityValues(dates.length, 0.15, 0.5);
+            
+            const option = {
+                title: {
+                    text: '市场波动率指数',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#4361ee',
+                    borderWidth: 1
+                },
+                legend: {
+                    data: ['7日波动率', '30日波动率', '90日波动率'],
+                    bottom: 10
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: '{value}%'
+                    }
+                },
+                series: [
+                    {
+                        name: '7日波动率',
+                        type: 'line',
+                        data: values7d,
+                        smooth: true,
+                        lineStyle: { color: '#007AFF', width: 2 },
+                        itemStyle: { color: '#007AFF' }
+                    },
+                    {
+                        name: '30日波动率',
+                        type: 'line',
+                        data: values30d,
+                        smooth: true,
+                        lineStyle: { color: '#34C759', width: 2 },
+                        itemStyle: { color: '#34C759' }
+                    },
+                    {
+                        name: '90日波动率',
+                        type: 'line',
+                        data: values90d,
+                        smooth: true,
+                        lineStyle: { color: '#FF3B30', width: 2 },
+                        itemStyle: { color: '#FF3B30' }
+                    }
+                ]
+            };
+            
+            charts.volatility.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载流动性数据
+         */
+        function loadLiquidityData() {
+            const dates = generateDateRange(currentTimeFrames['liquidity']);
+            const values = generateLiquidityValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: '流动性指数',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#06d6a0',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                series: [{
+                    name: '流动性指数',
+                    type: 'line',
+                    data: values,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#06d6a0',
+                        width: 3
+                    },
+                    itemStyle: {
+                        color: '#06d6a0'
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(6, 214, 160, 0.3)' },
+                                { offset: 1, color: 'rgba(6, 214, 160, 0.05)' }
+                            ]
+                        }
+                    }
+                }]
+            };
+            
+            charts.liquidity.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载市场宽度数据
+         */
+        function loadMarketBreadthData() {
+            const dates = generateDateRange(currentTimeFrames['breadth']);
+            const values = generateMarketBreadthValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: '市场宽度指数',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#118ab2',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100,
+                    axisLabel: {
+                        formatter: '{value}%'
+                    }
+                },
+                series: [{
+                    name: '市场宽度',
+                    type: 'bar',
+                    data: values,
+                    itemStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: '#118ab2' },
+                                { offset: 1, color: '#4361ee' }
+                            ]
+                        }
+                    }
+                }]
+            };
+            
+            charts.breadth.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载山寨币指数数据
+         */
+        function loadAltcoinData() {
+            const dates = generateDateRange('30d');
+            const values = generateAltcoinValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: '山寨币指数',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#ff9500',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100
+                },
+                series: [{
+                    name: '山寨币指数',
+                    type: 'line',
+                    data: values,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#ff9500',
+                        width: 3
+                    },
+                    itemStyle: {
+                        color: '#ff9500'
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(255, 149, 0, 0.4)' },
+                                { offset: 1, color: 'rgba(255, 149, 0, 0.05)' }
+                            ]
+                        }
+                    },
+                    markLine: {
+                        data: [
+                            {yAxis: 75, name: '山寨币季节', lineStyle: {color: '#34c759', width: 2}},
+                            {yAxis: 25, name: 'BTC主导', lineStyle: {color: '#ff3b30', width: 2}}
+                        ]
+                    }
+                }]
+            };
+            
+            charts.altcoin.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载BTC彩虹价表数据
+         */
+        function loadBTCRainbowData() {
+            const currentPrice = 65000;
+            const priceRanges = [
+                { name: '最大泡沫', min: 120000, max: 200000, color: '#ff0000' },
+                { name: '卖出', min: 90000, max: 120000, color: '#ff8000' },
+                { name: 'FOMO强化', min: 70000, max: 90000, color: '#ffff00' },
+                { name: '仍然便宜', min: 55000, max: 70000, color: '#80ff00' },
+                { name: '积累', min: 42000, max: 55000, color: '#00ff00' },
+                { name: '买入', min: 32000, max: 42000, color: '#00ff80' },
+                { name: '基本上是火', min: 24000, max: 32000, color: '#00ffff' },
+                { name: 'BTC便宜', min: 18000, max: 24000, color: '#0080ff' },
+                { name: '积累', min: 13000, max: 18000, color: '#0000ff' },
+                { name: '买入', min: 8000, max: 13000, color: '#8000ff' }
+            ];
+            
+            const option = {
+                title: {
+                    text: 'BTC彩虹价格表',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        color: '#fff'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        const range = priceRanges[params.dataIndex];
+                        return `${range.name}<br/>$${range.min.toLocaleString()} - $${range.max.toLocaleString()}`;
+                    }
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['30%', '70%'],
+                    center: ['50%', '50%'],
+                    data: priceRanges.map((range, index) => ({
+                        value: 1,
+                        name: range.name,
+                        itemStyle: {
+                            color: range.color
+                        }
+                    })),
+                    label: {
+                        show: true,
+                        fontSize: 10,
+                        color: '#fff'
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }],
+                graphic: {
+                    type: 'text',
+                    left: 'center',
+                    top: 'center',
+                    style: {
+                        text: `$${currentPrice.toLocaleString()}`,
+                        fontSize: 16,
+                        fontWeight: 'bold',
+                        fill: '#fff'
+                    }
+                }
+            };
+            
+            charts.btcRainbow.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载AHR999数据
+         */
+        function loadAHR999Data() {
+            const dates = generateDateRange('90d');
+            const values = generateAHR999Values(dates.length);
+            
+            const option = {
+                title: {
+                    text: 'AHR999指标',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#4361ee',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                series: [{
+                    name: 'AHR999',
+                    type: 'line',
+                    data: values,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#4361ee',
+                        width: 3
+                    },
+                    itemStyle: {
+                        color: '#4361ee'
+                    },
+                    markLine: {
+                        data: [
+                            {yAxis: 1.2, name: '抄底区间', lineStyle: {color: '#34c759', width: 2}},
+                            {yAxis: 0.45, name: '定投区间', lineStyle: {color: '#ffd166', width: 2}}
+                        ]
+                    }
+                }]
+            };
+            
+            charts.ahr999.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载横截面差异指数数据
+         */
+        function loadCrossSectionData() {
+            const dates = generateDateRange('30d');
+            const values = generateCrossSectionValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: '横截面差异指数',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#34c759',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                series: [{
+                    name: '横截面差异指数',
+                    type: 'line',
+                    data: values,
+                    smooth: true,
+                    lineStyle: {
+                        color: '#34c759',
+                        width: 3
+                    },
+                    itemStyle: {
+                        color: '#34c759'
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(52, 199, 89, 0.3)' },
+                                { offset: 1, color: 'rgba(52, 199, 89, 0.05)' }
+                            ]
+                        }
+                    }
+                }]
+            };
+            
+            charts.crossSection.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载MA均线宽度数据
+         */
+        function loadMABreadthData() {
+            const dates = generateDateRange('30d');
+            const values = generateMABreadthValues(dates.length);
+            
+            const option = {
+                title: {
+                    text: 'MA均线宽度',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#af52de',
+                    borderWidth: 1
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: '{value}%'
+                    }
+                },
+                series: [{
+                    name: 'MA均线宽度',
+                    type: 'bar',
+                    data: values,
+                    itemStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: '#af52de' },
+                                { offset: 1, color: '#ff2d55' }
+                            ]
+                        }
+                    }
+                }]
+            };
+            
+            charts.maBreadth.setOption(applyThemeColors(option));
+        }
+
+        /**
+         * 加载市场情绪数据
+         */
+        function loadSentimentData() {
+            // 模拟情绪数据
+            const fearGreed = Math.floor(Math.random() * 100);
+            const marketHeat = Math.floor(Math.random() * 100);
+            const moneyFlow = Math.floor(Math.random() * 100);
+            const confidence = Math.floor(Math.random() * 100);
+            
+            // 更新情绪指标
+            updateSentimentIndicator('fearGreed', fearGreed);
+            updateSentimentIndicator('marketHeat', marketHeat);
+            updateSentimentIndicator('moneyFlow', moneyFlow);
+            updateSentimentIndicator('confidence', confidence);
+        }
+
+        /**
+         * 更新情绪指标
+         */
+        function updateSentimentIndicator(type, value) {
+            const valueElement = document.getElementById(type + 'Value');
+            const statusElement = document.getElementById(type + 'Status');
+            
+            if (valueElement) {
+                valueElement.textContent = value;
+            }
+            
+            if (statusElement) {
+                let status, className;
+                if (value >= 75) {
+                    status = '极度贪婪';
+                    className = 'sentiment-extreme-greed';
+                } else if (value >= 55) {
+                    status = '贪婪';
+                    className = 'sentiment-greed';
+                } else if (value >= 45) {
+                    status = '中性';
+                    className = 'sentiment-neutral';
+                } else if (value >= 25) {
+                    status = '恐慌';
+                    className = 'sentiment-fear';
+                } else {
+                    status = '极度恐慌';
+                    className = 'sentiment-extreme-fear';
+                }
+                
+                statusElement.textContent = status;
+                statusElement.className = 'sentiment-status ' + className;
+            }
+        }
+
+        /**
+         * 生成日期范围
+         */
+        function generateDateRange(period) {
+            const dates = [];
+            const today = new Date();
+            let days;
+            
+            switch(period) {
+                case '24h':
+                    days = 1;
+                    break;
+                case '7d':
+                    days = 7;
+                    break;
+                case '30d':
+                    days = 30;
+                    break;
+                case '90d':
+                    days = 90;
+                    break;
+                default:
+                    days = 30;
+            }
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            return dates;
+        }
+
+        /**
+         * 生成Y指数模拟数据
+         */
+        function generateYIndexValues(length) {
+            const values = [];
+            let baseValue = 50;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 20;
+                baseValue = Math.max(-50, Math.min(300, baseValue));
+                values.push(Math.round(baseValue * 100) / 100);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成波动率模拟数据
+         */
+        function generateVolatilityValues(length) {
+            const values = [];
+            let baseValue = 0.3;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 0.1;
+                baseValue = Math.max(0.1, Math.min(1.0, baseValue));
+                values.push(Math.round(baseValue * 1000) / 1000);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成流动性模拟数据
+         */
+        function generateLiquidityValues(length) {
+            const values = [];
+            let baseValue = 0.6;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 0.2;
+                baseValue = Math.max(0.2, Math.min(1.0, baseValue));
+                values.push(Math.round(baseValue * 1000) / 1000);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成市场宽度模拟数据
+         */
+        function generateMarketBreadthValues(length) {
+            const values = [];
+            let baseValue = 0.5;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 0.3;
+                baseValue = Math.max(0.1, Math.min(0.9, baseValue));
+                values.push(Math.round(baseValue * 1000) / 1000);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成山寨币指数模拟数据
+         */
+        function generateAltcoinValues(length) {
+            const values = [];
+            let baseValue = 50;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 10;
+                baseValue = Math.max(0, Math.min(100, baseValue));
+                values.push(Math.round(baseValue * 100) / 100);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成AHR999模拟数据
+         */
+        function generateAHR999Values(length) {
+            const values = [];
+            let baseValue = 0.8;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 0.2;
+                baseValue = Math.max(0.1, Math.min(3.0, baseValue));
+                values.push(Math.round(baseValue * 1000) / 1000);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成横截面差异指数模拟数据
+         */
+        function generateCrossSectionValues(length) {
+            const values = [];
+            let baseValue = 0.3;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 0.1;
+                baseValue = Math.max(0.1, Math.min(0.8, baseValue));
+                values.push(Math.round(baseValue * 1000) / 1000);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 生成MA均线宽度模拟数据
+         */
+        function generateMABreadthValues(length) {
+            const values = [];
+            let baseValue = 15;
+            
+            for (let i = 0; i < length; i++) {
+                baseValue += (Math.random() - 0.5) * 5;
+                baseValue = Math.max(5, Math.min(40, baseValue));
+                values.push(Math.round(baseValue * 100) / 100);
+            }
+            
+            return values;
+        }
+
+        /**
+         * 切换时间框架
+         */
+        function switchTimeframe(chartType, period) {
+            // 移除所有活跃状态
+            const buttons = document.querySelectorAll(`#${chartType}Panel .time-selector .time-btn`);
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // 添加活跃状态到当前按钮
+            event.target.classList.add('active');
+            
+            // 重新加载对应图表数据
+            switch(chartType) {
+                case 'yIndex':
+                    loadYIndexData(period);
+                    break;
+                case 'volatility':
+                    loadVolatilityData(period);
+                    break;
+                case 'liquidity':
+                    loadLiquidityData(period);
+                    break;
+                case 'marketBreadth':
+                    loadMarketBreadthData(period);
+                    break;
+            }
+        }
+
+        /**
+         * 滚动到指定区域
+         */
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            if (element) {
+                const headerHeight = 80; // 顶部导航栏高度
+                const elementPosition = element.offsetTop - headerHeight;
+                
+                window.scrollTo({
+                    top: elementPosition,
+                    behavior: 'smooth'
+                });
+                
+                // 更新导航状态
+                updateNavigation(sectionId);
+            }
+        }
+
+        /**
+         * 更新导航状态
+         */
+        function updateNavigation(activeSection) {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(activeSection)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        /**
+         * 初始化图表交互功能
+         */
+        function initializeChartInteractions() {
+            // 为所有图表添加滚轮缩放功能
+            Object.values(charts).forEach(chart => {
+                if (chart && chart.getDom) {
+                    const dom = chart.getDom();
+                    dom.addEventListener('wheel', function(e) {
+                        e.preventDefault();
+                        // 这里可以添加自定义的缩放逻辑
+                    });
+                }
+            });
+        }
+
+        /**
+         * 打开图表模态框
+         */
+        function openChartModal(chartId) {
+            const modal = document.getElementById('chartModal');
+            const modalChart = document.getElementById('modalChart');
+            const originalChart = document.getElementById(chartId);
+            
+            if (modal && modalChart && originalChart) {
+                // 复制图表内容到模态框
+                modalChart.innerHTML = originalChart.innerHTML;
+                modal.style.display = 'flex';
+                
+                // 添加键盘事件监听
+                document.addEventListener('keydown', handleModalKeydown);
+            }
+        }
+
+        /**
+         * 关闭图表模态框
+         */
+        function closeChartModal() {
+            const modal = document.getElementById('chartModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // 移除键盘事件监听
+                document.removeEventListener('keydown', handleModalKeydown);
+            }
+        }
+
+        /**
+         * 处理模态框键盘事件
+         */
+        function handleModalKeydown(e) {
+            if (e.key === 'Escape') {
+                closeChartModal();
+            }
+        }
+
+        /**
+         * 滚动到顶部
+         */
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadAllData();
+            initializeChartInteractions();
+            
+            // 自动刷新数据
+            setInterval(function() {
+                if (!document.hidden) {
+                    loadAllData();
+                    updateTimestamp();
+                }
+            }, 30000); // 30秒刷新一次
+            
+            // 返回顶部按钮显示/隐藏
+            window.addEventListener('scroll', function() {
+                const backToTop = document.getElementById('backToTop');
+                if (backToTop) {
+                    if (window.pageYOffset > 300) {
+                        backToTop.style.display = 'block';
+                    } else {
+                        backToTop.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // 点击模态框背景关闭
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('chartModal');
+            if (e.target === modal) {
+                closeChartModal();
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + 数字键快速跳转
+            if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '6') {
+                e.preventDefault();
+                const sections = ['overview', 'valueIndicators', 'marketSentiment', 'technicalIndicators', 'riskIndicators', 'advancedIndicators'];
+                const sectionIndex = parseInt(e.key) - 1;
+                if (sections[sectionIndex]) {
+                    scrollToSection(sections[sectionIndex]);
+                }
+            }
+            
+            // 空格键暂停/恢复自动刷新
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                // 这里可以添加暂停/恢复逻辑
+            }
+        });
+
+        /**
+         * 更新时间戳
+         */
+        function updateTimestamp() {
+            const timestampElement = document.querySelector('.last-update');
+            if (timestampElement) {
+                const now = new Date();
+                timestampElement.textContent = `最后更新: ${now.toLocaleString('zh-CN')}`;
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="logo" onclick="scrollToSection('overview')">
+                <i class="fas fa-chart-line"></i>
+                <span>Y指数监控</span>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item active" onclick="scrollToSection('overview')">概览</div>
+                <div class="nav-item" onclick="scrollToSection('valueIndicators')">价值指标</div>
+                <div class="nav-item" onclick="scrollToSection('marketSentiment')">市场情绪</div>
+                <div class="nav-item" onclick="scrollToSection('technicalIndicators')">技术指标</div>
+                <div class="nav-item" onclick="scrollToSection('riskIndicators')">风险指标</div>
+                <div class="nav-item" onclick="scrollToSection('advancedIndicators')">高级指标</div>
+            </div>
+            
+            <div class="nav-status">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>实时连接</span>
+                </div>
+                <div class="last-update">最后更新: --</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="main-container">
+        <!-- 概览面板 -->
+        <section id="overview" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-tachometer-alt"></i> 市场概览</h2>
+                <p>实时监控数字货币市场关键指标</p>
+            </div>
+            
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #007AFF, #5856D6);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Y指数</h3>
+                        <div class="card-value" id="yIndexValue">--</div>
+                        <div class="card-change positive">+2.5%</div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #FF3B30, #FF9500);">
+                        <i class="fas fa-wave-square"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>市场波动率</h3>
+                        <div class="card-value" id="volatilityValue">--</div>
+                        <div class="card-change negative">-1.2%</div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #34C759, #30D158);">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>流动性指数</h3>
+                        <div class="card-value" id="liquidityValue">--</div>
+                        <div class="card-change positive">+0.8%</div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #AF52DE, #FF2D55);">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>市场宽度</h3>
+                        <div class="card-value" id="marketBreadthValue">--</div>
+                        <div class="card-change positive">+3.1%</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Y指数走势图 -->
+        <section class="section">
+            <div class="chart-panel" id="yIndexPanel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-chart-area"></i> Y指数走势图</h3>
+                    <div class="time-selector">
+                        <button class="time-btn active" onclick="switchTimeframe('yIndex', '24h')">24H</button>
+                        <button class="time-btn" onclick="switchTimeframe('yIndex', '7d')">7D</button>
+                        <button class="time-btn" onclick="switchTimeframe('yIndex', '30d')">30D</button>
+                        <button class="time-btn" onclick="switchTimeframe('yIndex', '90d')">90D</button>
+                    </div>
+                </div>
+                <div class="chart-container square-chart" id="yIndexChart" onclick="openChartModal('yIndexChart')"></div>
+                <div class="chart-description">
+                    <p><strong>Y指数说明：</strong>综合反映数字货币市场整体状况的指标，数值越高表示市场风险越大。</p>
+                    <div class="risk-levels">
+                        <span class="risk-level high">高风险区 (>200)</span>
+                        <span class="risk-level medium">中风险区 (100-200)</span>
+                        <span class="risk-level low">低风险区 (0-100)</span>
+                        <span class="risk-level safe">安全区 (<0)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 价值指标 -->
+        <section id="valueIndicators" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-coins"></i> 价值指标</h2>
+                <p>基于价值分析的市场指标</p>
+            </div>
+            
+            <div class="indicators-grid">
+                <!-- 山寨币指数 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-layer-group"></i> 山寨币指数</h3>
+                        <div class="indicator-value" id="altcoinValue">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="altcoinChart" onclick="openChartModal('altcoinChart')"></div>
+                    <div class="indicator-description">
+                        <p>衡量山寨币相对于比特币的表现强度</p>
+                    </div>
+                </div>
+                
+                <!-- BTC彩虹价格表 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-rainbow"></i> BTC彩虹价格表</h3>
+                        <div class="indicator-value" id="btcRainbowValue">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="btcRainbowChart" onclick="openChartModal('btcRainbowChart')"></div>
+                    <div class="indicator-description">
+                        <p>基于对数回归的比特币长期价格预测模型</p>
+                    </div>
+                </div>
+                
+                <!-- 贪婪恐慌指数 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-thermometer-half"></i> 贪婪恐慌指数</h3>
+                        <div class="indicator-value" id="fearGreedValue">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="fearGreedChart" onclick="openChartModal('fearGreedChart')"></div>
+                    <div class="indicator-description">
+                        <p>反映市场参与者情绪的综合指标</p>
+                    </div>
+                </div>
+                
+                <!-- AHR999指标 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bullseye"></i> AHR999指标</h3>
+                        <div class="indicator-value" id="ahr999Value">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="ahr999Chart" onclick="openChartModal('ahr999Chart')"></div>
+                    <div class="indicator-description">
+                        <p>比特币定投策略指标，<1.2为抄底区间</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 市场情绪 -->
+        <section id="marketSentiment" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-heart-pulse"></i> 市场情绪</h2>
+                <p>实时监控市场情绪变化</p>
+            </div>
+            
+            <div class="sentiment-grid">
+                <div class="sentiment-card">
+                    <div class="sentiment-icon fear-greed">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="sentiment-info">
+                        <h4>恐慌贪婪</h4>
+                        <div class="sentiment-value" id="fearGreedValue">--</div>
+                        <div class="sentiment-status" id="fearGreedStatus">--</div>
+                    </div>
+                </div>
+                
+                <div class="sentiment-card">
+                    <div class="sentiment-icon market-heat">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="sentiment-info">
+                        <h4>市场热度</h4>
+                        <div class="sentiment-value" id="marketHeatValue">--</div>
+                        <div class="sentiment-status" id="marketHeatStatus">--</div>
+                    </div>
+                </div>
+                
+                <div class="sentiment-card">
+                    <div class="sentiment-icon money-flow">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="sentiment-info">
+                        <h4>资金流向</h4>
+                        <div class="sentiment-value" id="moneyFlowValue">--</div>
+                        <div class="sentiment-status" id="moneyFlowStatus">--</div>
+                    </div>
+                </div>
+                
+                <div class="sentiment-card">
+                    <div class="sentiment-icon confidence">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="sentiment-info">
+                        <h4>市场信心</h4>
+                        <div class="sentiment-value" id="confidenceValue">--</div>
+                        <div class="sentiment-status" id="confidenceStatus">--</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 技术指标 -->
+        <section id="technicalIndicators" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-bar"></i> 技术指标</h2>
+                <p>基于技术分析的市场指标</p>
+            </div>
+            
+            <div class="indicators-grid">
+                <!-- 市场波动率 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-wave-square"></i> 市场波动率</h3>
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="switchTimeframe('volatility', '7d')">7D</button>
+                            <button class="time-btn" onclick="switchTimeframe('volatility', '30d')">30D</button>
+                            <button class="time-btn" onclick="switchTimeframe('volatility', '90d')">90D</button>
+                        </div>
+                    </div>
+                    <div class="chart-container square-chart" id="volatilityChart" onclick="openChartModal('volatilityChart')"></div>
+                    <div class="indicator-description">
+                        <p>衡量市场价格波动程度的指标</p>
+                    </div>
+                </div>
+                
+                <!-- 流动性指数 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tint"></i> 流动性指数</h3>
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="switchTimeframe('liquidity', '7d')">7D</button>
+                            <button class="time-btn" onclick="switchTimeframe('liquidity', '30d')">30D</button>
+                            <button class="time-btn" onclick="switchTimeframe('liquidity', '90d')">90D</button>
+                        </div>
+                    </div>
+                    <div class="chart-container square-chart" id="liquidityChart" onclick="openChartModal('liquidityChart')"></div>
+                    <div class="indicator-description">
+                        <p>反映市场流动性状况的综合指标</p>
+                    </div>
+                </div>
+                
+                <!-- 市场宽度 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-expand-arrows-alt"></i> 市场宽度</h3>
+                        <div class="time-selector">
+                            <button class="time-btn active" onclick="switchTimeframe('marketBreadth', '7d')">7D</button>
+                            <button class="time-btn" onclick="switchTimeframe('marketBreadth', '30d')">30D</button>
+                            <button class="time-btn" onclick="switchTimeframe('marketBreadth', '90d')">90D</button>
+                        </div>
+                    </div>
+                    <div class="chart-container square-chart" id="marketBreadthChart" onclick="openChartModal('marketBreadthChart')"></div>
+                    <div class="indicator-description">
+                        <p>衡量市场参与度和广度的指标</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 风险指标 -->
+        <section id="riskIndicators" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-shield-alt"></i> 风险指标</h2>
+                <p>评估市场风险水平</p>
+            </div>
+            
+            <div class="indicators-grid">
+                <!-- 横截面差异指数 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-project-diagram"></i> 横截面差异指数</h3>
+                        <div class="indicator-value" id="crossSectionValue">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="crossSectionChart" onclick="openChartModal('crossSectionChart')"></div>
+                    <div class="indicator-description">
+                        <p>衡量不同资产间收益率差异的指标</p>
+                    </div>
+                </div>
+                
+                <!-- MA均线宽度 -->
+                <div class="indicator-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-line"></i> MA均线宽度</h3>
+                        <div class="indicator-value" id="maBreadthValue">--</div>
+                    </div>
+                    <div class="chart-container square-chart" id="maBreadthChart" onclick="openChartModal('maBreadthChart')"></div>
+                    <div class="indicator-description">
+                        <p>反映移动平均线分散程度的技术指标</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 图表放大模态框 -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeChartModal()">&times;</span>
+            <div id="modalChart" class="modal-chart"></div>
+        </div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <button id="backToTop" class="back-to-top" onclick="scrollToTop()">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- 页面底部信息 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p style="margin: 0; font-size: 12px; opacity: 0.7;">
+                © 2024 Y指数监控面板 | 数据仅供参考，投资有风险
+            </p>
+            <div style="margin-top: 8px; font-size: 11px; opacity: 0.5;">
+                <span>快捷键：Ctrl+1-6 快速跳转 | 空格键 暂停刷新</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 加载提示 -->
+    <div id="loadingIndicator" class="loading-indicator">
+        <div class="loading-spinner"></div>
+        <p>正在加载数据...</p>
+    </div>
+</body>
+</html>

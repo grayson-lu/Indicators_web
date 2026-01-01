@@ -1,0 +1,4108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y指数监控面板 - 专业版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 现代化全局样式 */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 60%, #14b8a6 100%);
+            --secondary-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --success-gradient: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            --warning-gradient: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+            --danger-gradient: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+            --info-gradient: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+
+            /* 线条 Token（集中管理线宽） */
+            --line-width-primary: 3.0;
+            --line-width-secondary: 2.5;
+            --line-width-reference: 1.5;
+            --line-width-support: 2.0;
+            --line-width-trend: 2.8;
+            
+            --primary-color: #2563eb;
+            --secondary-color: #e2e8f0;
+            --success-color: #16a34a;
+            --warning-color: #f59e0b;
+            --danger-color: #f43f5e;
+            --info-color: #0ea5e9;
+            --dark-color: #0f172a;
+            --light-color: #f8fafc;
+            --border-color: rgba(148, 163, 184, 0.35);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --border-radius-sm: 6px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+            
+            --transition-fast: all 0.15s ease;
+            --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 将与“线条相关”的样式集中在一起，便于统一调优 */
+        .line-primary   { stroke-width: var(--line-width-primary); }
+        .line-secondary { stroke-width: var(--line-width-secondary); }
+        .line-reference { stroke-width: var(--line-width-reference); stroke-dasharray: 4 4; }
+        .line-support   { stroke-width: var(--line-width-support);   stroke-dasharray: 2 6; }
+        .line-trend     { stroke-width: var(--line-width-trend); }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.08), transparent 40%),
+                        radial-gradient(circle at 85% 0%, rgba(14, 165, 233, 0.08), transparent 45%),
+                        #f8fafc;
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 70% 85%, rgba(20, 184, 166, 0.08), transparent 55%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.98) 100%);
+            color: var(--text-primary);
+            padding: 3.5rem 0 3rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: -10%;
+            width: 60%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 60%);
+            opacity: 0.8;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            right: -15%;
+            top: -50%;
+            width: 55%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.18), transparent 60%);
+            opacity: 0.8;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2.5rem;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 620px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.1);
+            color: #1d4ed8;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .hero-subtitle {
+            font-size: 1.05rem;
+            color: rgba(71, 85, 105, 0.85);
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 0.7rem 1.6rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .btn.primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn.ghost {
+            background: rgba(255, 255, 255, 0.8);
+            color: #0f172a;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+        }
+
+        .btn.ghost:hover {
+            border-color: rgba(37, 99, 235, 0.6);
+            color: #1d4ed8;
+        }
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            text-shadow: 0 20px 40px rgba(148, 163, 184, 0.35);
+        }
+
+        .header-icon {
+            width: 62px;
+            height: 62px;
+            background: rgba(37, 99, 235, 0.12);
+            border-radius: var(--border-radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            color: #1d4ed8;
+        }
+
+        .header-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.25rem;
+            align-items: stretch;
+            flex: 1;
+            min-width: 320px;
+        }
+
+        .header-stat {
+            text-align: left;
+            padding: 1.2rem 1.4rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: var(--border-radius-lg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            transition: var(--transition-normal);
+            min-width: 150px;
+        }
+
+        .header-stat:hover {
+            border-color: rgba(37, 99, 235, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .header-stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+        }
+
+        .header-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* 通知系统 */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius-md);
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            z-index: 10000;
+            transform: translateX(400px);
+            transition: var(--transition-normal);
+            max-width: 400px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-gradient);
+        }
+
+        .notification.error {
+            background: var(--danger-gradient);
+        }
+
+        .notification.info {
+            background: var(--info-gradient);
+        }
+
+        /* 概览卡片网格 */
+        .overview-section {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .overview-card {
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            backdrop-filter: blur(18px);
+        }
+
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transition: var(--transition-normal);
+        }
+
+        .overview-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 45px rgba(148, 163, 184, 0.35);
+        }
+
+        .overview-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .overview-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .overview-card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .overview-card-icon {
+            width: 42px;
+            height: 42px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: var(--border-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d4ed8;
+            font-size: 1.125rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .overview-card-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        .overview-card-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .overview-card-change {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-xl);
+            background: rgba(248, 250, 252, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        .overview-card-change.positive {
+            color: var(--success-color);
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .overview-card-change.negative {
+            color: var(--danger-color);
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .overview-card-change.neutral {
+            color: var(--info-color);
+            background: rgba(56, 189, 248, 0.12);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        /* 图表容器样式增强 */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin: 40px auto;
+            max-width: 1400px;
+            padding: 0 20px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--border-radius-lg);
+            padding: 25px;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            backdrop-filter: blur(16px);
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transition: var(--transition-normal);
+        }
+
+        .chart-container:hover {
+            box-shadow: 0 25px 40px rgba(148, 163, 184, 0.35);
+        }
+
+        .chart-container:hover::before {
+            transform: scaleX(1);
+        }
+
+        /* 图表说明详细版样式 */
+        .chart-desc {
+            padding: 15px;
+            background: rgba(248, 250, 252, 0.95);
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #38bdf8;
+            color: var(--text-secondary);
+        }
+
+        .desc-summary {
+            font-size: 14px;
+            color: #0f172a;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .desc-details {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #64748b;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .desc-details h4 {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 8px 0;
+        }
+
+        .desc-details ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .desc-details li {
+            margin: 6px 0;
+        }
+
+        .desc-toggle {
+            background: none;
+            border: none;
+            color: #2563eb;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .desc-toggle:hover {
+            background-color: rgba(37, 99, 235, 0.12);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chart-icon {
+            width: 30px;
+            height: 30px;
+            background: rgba(37, 99, 235, 0.12);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d4ed8;
+            font-size: 14px;
+            border: 1px solid rgba(37, 99, 235, 0.25);
+        }
+        
+        /* 7日/30日对比区域样式（放大标签与数值尺寸） */
+        .overview-card-comparison {
+            margin-top: 8px;
+            padding: 6px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .comparison-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 2px 0;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease;
+            padding: 6px 8px;       /* 提升点击热区 */
+            border-radius: 6px;
+        }
+
+        .comparison-item:hover {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 6px;
+        }
+
+        .comparison-label {
+            color: #8b9dc3;
+            font-size: 1.15rem;     /* 放大标签字号 */
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .comparison-value {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;               /* 数值与箭头间距 */
+            font-size: 1.35rem;     /* 放大数值字号 */
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
+        .comparison-value.up {
+            color: #00d4aa;
+        }
+
+        .comparison-value.down {
+            color: #ff6b6b;
+        }
+
+        .comparison-value.flat {
+            color: #8b9dc3;
+        }
+
+        .comparison-value.anomaly {
+            color: #ff6b6b;
+            font-style: italic;
+        }
+
+        .comparison-arrow {
+            margin-left: 3px;
+            font-size: 8px;
+        }
+
+        .comparison-arrow.up::before {
+            content: "↗";
+        }
+
+        .comparison-arrow.down::before {
+            content: "↘";
+        }
+
+        .comparison-arrow.flat::before {
+            content: "→";
+        }
+
+        /* 小屏适配，避免过大导致换行溢出 */
+        @media (max-width: 480px) {
+            .overview-card-comparison .comparison-label {
+                font-size: 1.05rem;
+            }
+            .overview-card-comparison .comparison-value {
+                font-size: 1.2rem;
+            }
+        }
+        
+        /* 交易所净流入卡片特殊样式 */
+        .exchange-flow-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .exchange-flow-card .overview-card-value {
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .exchange-flow-card .overview-card-icon {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 信号指示器样式 */
+        .signal-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .signal-indicator.bullish {
+            background: rgba(52, 199, 89, 0.15);
+            color: #34c759;
+            border: 1px solid rgba(52, 199, 89, 0.3);
+        }
+        
+        .signal-indicator.bearish {
+            background: rgba(255, 59, 48, 0.15);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+        }
+        
+        .signal-indicator.neutral {
+            background: rgba(79, 172, 254, 0.15);
+            color: #4facfe;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+        
+        .signal-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .chart-status {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-status.normal {
+            background: rgba(22, 163, 74, 0.12);
+            color: var(--success-color);
+        }
+
+        .chart-status.warning {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--warning-color);
+        }
+
+        .chart-status.danger {
+            background: rgba(244, 63, 94, 0.12);
+            color: var(--danger-color);
+        }
+
+        /* 加载状态样式增强 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(248, 250, 252, 0.96);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: var(--transition);
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(148, 163, 184, 0.35);
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 1.2em;
+            color: #0f172a;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .loading-progress {
+            width: 300px;
+            height: 4px;
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+            animation: progress 2s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        /* 状态指示器样式 */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        .status-indicator.bullish {
+            background: rgba(22, 163, 74, 0.12);
+            color: var(--success-color);
+        }
+
+        .status-indicator.bearish {
+            background: rgba(244, 63, 94, 0.12);
+            color: var(--danger-color);
+        }
+
+        .status-indicator.neutral {
+            background: rgba(14, 165, 233, 0.12);
+            color: var(--info-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 数据源标识 */
+        .data-source {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.75em;
+            color: #64748b;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        /* 趋势箭头 */
+        .trend-arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .trend-arrow.up {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .trend-arrow.down {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .trend-arrow.flat {
+            background: var(--info-color);
+            color: white;
+        }
+
+        /* 页脚样式 */
+        .footer {
+            background: #f1f5f9;
+            color: #475569;
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+            border-top: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            flex-direction: column; /* 新增：强制垂直排列 */
+            gap: 15px; /* 新增：增加间距 */
+        }
+
+        .footer-info {
+            font-size: 0.9em;
+            opacity: 0.8;
+            width: 100%; /* 修改：确保占满整行 */
+            text-align: center; /* 新增：居中对齐 */
+            order: 1; /* 新增：确保版权信息在第一行 */
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            order: 2; /* 新增：确保链接在第二行 */
+        }
+
+        .footer-links a {
+            color: #2563eb;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .footer-links a:hover {
+            opacity: 1;
+        }
+
+        /* 响应式设计增强 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .header-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 0 15px;
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 0 15px;
+            }
+            
+            .overview-card,
+            .chart-container {
+                padding: 20px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+
+    <!-- 新增：前端统一图表主题（ECharts 可直接引用），颜色/线条/渐变集中定义 -->
+    <script>
+      window.ChartTheme = {
+        colors: {
+          primary: '#2E86AB',
+          secondary: '#A23B72',
+          warning: '#F18F01',
+          bearish: '#C73E1D',
+          bullish: '#4CAF50',
+          purple: '#9C27B0',
+          amber: '#FF9800',
+          blueGray: '#607D8B',
+          brown: '#795548',
+          pink: '#E91E63'
+        },
+        palette: ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#4CAF50', '#9C27B0', '#FF9800', '#607D8B', '#795548', '#E91E63'],
+        line: {
+          primary:   { width: 3.0, type: 'solid' },
+          secondary: { width: 2.5, type: 'solid' },
+          reference: { width: 1.5, type: 'dashed' },
+          support:   { width: 2.0, type: 'dotted' },
+          trend:     { width: 2.8, type: 'solid' }
+        },
+        gradient: {
+          bullish: ['#4CAF50', '#81C784', '#A5D6A7'],
+          bearish: ['#F44336', '#E57373', '#FFAB91'],
+          neutral: ['#2196F3', '#64B5F6', '#90CAF9'],
+          warning: ['#FF9800', '#FFB74D', '#FFCC02']
+        }
+      };
+    </script>
+</head>
+<body>
+    <!-- 加载覆盖层 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载数据...</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="hero">
+                <div class="hero-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Institutional-grade Dashboard
+                </div>
+                <div class="header-title">
+                    <div class="header-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h1>Y指数机构级监控面板</h1>
+                </div>
+                <p class="hero-subtitle">
+                    以 Glassnode Institutions 风格重构的市场监控视图，聚焦资金流、风险偏好与链上健康度。
+                    统一视觉语言与深色科技质感，帮助机构级团队快速判断市场状态。
+                </p>
+                <div class="hero-actions">
+                    <button class="btn primary">查看实时指标</button>
+                    <button class="btn ghost">订阅每日快报</button>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">系统状态</div>
+                    <div class="header-stat-value" id="system-status">运行中</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">数据源</div>
+                    <div class="header-stat-value">本地+链上</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label" id="last-update-time">最后更新</div>
+                    <div class="header-stat-value">实时</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 市场概览卡片 -->
+    <section class="overview-section">
+        <h2 class="section-title">市场概览</h2>
+        <div class="overview-grid">
+        <!-- Y指数卡片 -->
+        <div class="overview-card" id="y-index-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📊</span>
+                    Y指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+            </div>
+            <div class="data-source">实时数据</div>
+        </div>
+
+        <!-- MVRV指标卡片 -->
+        <div class="overview-card" id="mvrv-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">💎</span>
+                    MVRV指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    中性
+                </div>
+            </div>
+            <div class="data-source">链上数据</div>
+        </div>
+
+        <!-- 波动率指数卡片（新增） -->
+        <div class="overview-card" id="volatility-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📈</span>
+                    波动率指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 流动性指数卡片（新增） -->
+        <div class="overview-card" id="liquidity-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">💧</span>
+                    流动性指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 市场宽度指数卡片（新增） -->
+        <div class="overview-card" id="market-breadth-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📏</span>
+                    市场宽度指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 稳定币供应量卡片 -->
+        <div class="overview-card" id="stablecoin-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">💰</span>
+                    稳定币供应量
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    中性
+                </div>
+            </div>
+            <div class="data-source">链上数据</div>
+        </div>
+
+        <!-- 交易所流入流出卡片 -->
+        <div class="overview-card" id="exchange-flow-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">🔄</span>
+                    交易所净流入
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    中性
+                </div>
+            </div>
+            <div class="data-source">链上数据</div>
+        </div>
+
+        <!-- 恐慌贪婪指数卡片 -->
+        <div class="overview-card" id="fear-greed-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">😱</span>
+                    恐慌贪婪指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    未知
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 山寨币指数卡片 -->
+        <div class="overview-card" id="altcoin-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">🚀</span>
+                    山寨币指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- AD百分比指标卡片 -->
+        <div class="overview-card" id="ad-percentage-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📈</span>
+                    AD百分比指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- AHR999指标卡片 -->
+        <div class="overview-card" id="ahr999-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">🎯</span>
+                    AHR999指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">链上数据</div>
+        </div>
+
+        <!-- 新增：BBW 布林带宽度 卡片 -->
+        <div class="overview-card" id="bbw-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📏</span>
+                    BBW 布林带宽度
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    中性
+                </div>
+            </div>
+            <div class="data-source">技术指标</div>
+        </div>
+
+        <!-- 资金费率监控卡片 -->
+        <div class="overview-card" id="funding-rate-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">💸</span>
+                    资金费率监控
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">交易所数据</div>
+        </div>
+
+        <!-- 链上稳定币供应量卡片 -->
+        <div class="overview-card" id="onchain-stablecoin-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">💰</span>
+                    链上稳定币供应量
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">链上数据</div>
+        </div>
+
+        <!-- 极值比率指标卡片 -->
+        <div class="overview-card" id="extreme-ratio-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">⚡</span>
+                    极值比率指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- MVRVY指标卡片 -->
+        <!-- 已删除 MVRVY 概览卡片 -->
+
+        <!-- 涨跌比重指标卡片 -->
+        <div class="overview-card" id="up-down-ratio-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">⚖️</span>
+                    涨跌比重指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 横截面差异指数卡片 -->
+        <div class="overview-card" id="cross-section-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📐</span>
+                    横截面差异指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+
+        <!-- 盘口价差监控卡片 -->
+        <div class="overview-card" id="spread-monitor-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📊</span>
+                    盘口价差监控
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">交易所数据</div>
+        </div>
+
+        <!-- Y综合指数卡片 -->
+        <div class="overview-card" id="y-composite-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">🎯</span>
+                    Y综合指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">综合数据</div>
+        </div>
+
+        <!-- 高级指标卡片 -->
+        <div class="overview-card" id="advanced-indicators-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">🔬</span>
+                    高级指标
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">综合数据</div>
+        </div>
+
+        <!-- 市场涨跌幅指数卡片 -->
+        <div class="overview-card" id="market-zdf-card">
+            <div class="overview-card-header">
+                <div class="overview-card-title">
+                    <span class="overview-card-icon">📈</span>
+                    市场涨跌幅指数
+                </div>
+            </div>
+            <div class="overview-card-value">加载中...</div>
+            <div class="overview-card-details">
+                <div class="overview-card-change neutral">
+                    <span class="trend-arrow flat">→</span>
+                    0.00%
+                </div>
+                <div class="status-indicator neutral">
+                    <span class="status-dot"></span>
+                    正常
+                </div>
+            </div>
+            <div class="data-source">市场数据</div>
+        </div>
+        </div>
+    </section>
+
+    <!-- 图表网格 -->
+    <section class="chart-grid">
+        <!-- Y指数图表 -->
+               <!-- Y指数趋势图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📈</span>
+                    Y指数趋势
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">价量/波动/广度等因子标准化加权，综合评估市场状态。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>Y指数通过对价格动量(30%)、成交量(20%)、技术指标(20%)、波动率(15%)、市场广度(15%)五大维度标准化评分后加权合成，生成0-100分的综合市场评级。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>价格动量</strong>：5日/20日涨跌幅标准化评分</li>
+                        <li><strong>成交量</strong>：成交量相对20日均值比率评分</li>
+                        <li><strong>技术指标</strong>：RSI + MACD复合技术评分</li>
+                        <li><strong>波动率</strong>：20日收益率标准差反向评分</li>
+                        <li><strong>市场广度</strong>：上涨币种占比评分</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>80-100分</strong>：市场极强，主升浪行情</li>
+                        <li><strong>60-80分</strong>：市场偏强，震荡上行</li>
+                        <li><strong>40-60分</strong>：市场中性，方向不明</li>
+                        <li><strong>20-40分</strong>：市场偏弱，回调风险</li>
+                        <li><strong>0-20分</strong>：市场极弱，深度调整</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>Y指数为滞后确认指标，需结合领先指标使用。高分数需关注是否已透支上涨空间，低分数需观察是否存在超跌反弹机会。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="y_index_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 波动率指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📊</span>
+                    波动率指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">由收益率标准差与振幅构建，衡量市场波动特征。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>通过统计成交额前100币种的收益率标准差、振幅标准差，以及高波动币种占比，构建综合波动率指数。反映市场整体波动水平和分化程度。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>收益率波动</strong>：日收益率20日滚动标准差</li>
+                        <li><strong>振幅波动</strong>：日振幅((high-low)/close)标准差</li>
+                        <li><strong>高波动占比</strong>：波动率超过阈值的币种比例</li>
+                        <li><strong>综合波动指数</strong>：上述指标加权合成</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>极低波动</strong>：市场平静，酝酿大行情</li>
+                        <li><strong>正常波动</strong>：健康的价格发现过程</li>
+                        <li><strong>高波动</strong>：趋势强劲或情绪激烈</li>
+                        <li><strong>极端波动</strong>：恐慌或狂热，转折在即</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>波动率具有聚集性特征。低波动期往往预示变盘，高波动期需防范风险放大。结合VIX恐慌指数和资金费率判断情绪极值。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="volatility_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 流动性指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">💧</span>
+                    流动性指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">成交额、盘口深度、点差加权衡量市场流动性水平。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>基于成交量与价格波动的关系构建流动性评估模型。通过波动率-成交量比率、市场深度指标、价差成本等维度，衡量市场整体流动性状况。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>波动-成交比</strong>：价格波动率/成交量比率，反向指标</li>
+                        <li><strong>市场深度</strong>：基于成交量分布的深度评估</li>
+                        <li><strong>流动性综合评分</strong>：多维度指标标准化加权</li>
+                        <li><strong>流动性等级</strong>：优秀(>80)、良好(60-80)、一般(40-60)、较差(<40)</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>高流动性</strong>：交易成本低，价格发现高效</li>
+                        <li><strong>中等流动性</strong>：正常市场状态，适度交易摩擦</li>
+                        <li><strong>低流动性</strong>：交易冲击大，价格容易被操纵</li>
+                        <li><strong>流动性恶化</strong>：市场恐慌，资金撤离</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>流动性指标具有逆周期性。牛市初期流动性改善，牛市后期可能因过度投机而恶化。需关注结构性流动性变化。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="liquidity_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 市场宽度指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📏</span>
+                    市场宽度指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">上涨家数占比与均线广度综合，评估市场参与广度。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>统计涨跌幅币种比例、创新高占比、收盘价位于均线上方的币种比例等指标，评估市场上涨的广度和持续性。广度指标是趋势确认的重要工具。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>涨跌比例</strong>：上涨币种数/总币种数</li>
+                        <li><strong>创新高占比</strong>：创N日新高币种占比</li>
+                        <li><strong>均线广度</strong>：收盘价>MA的币种占比</li>
+                        <li><strong>AD百分比</strong>：(新高数-新低数)/总数</li>
+                        <li><strong>综合宽度指数</strong>：上述指标加权合成</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>宽度扩张</strong>：多数币种参与上涨，趋势健康</li>
+                        <li><strong>宽度收窄</strong>：少数币种领涨，分化开始</li>
+                        <li><strong>负宽度</strong>：普跌格局，系统性风险</li>
+                        <li><strong>宽度背离</strong>：价格创新高但宽度不配合，警惕顶部</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>市场宽度与价格走势可能出现背离。价格新高而宽度恶化，往往预示趋势转弱。需结合成交量确认宽度变化的有效性。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="market_breadth_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- MVRV指标图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">💎</span>
+                    MVRV指标
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">MVRV=流通市值/已实现市值，衡量市场整体持仓成本。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>MVRV比率反映当前价格相对于市场整体持仓成本的位置。已实现市值=每个币最后移动时的价格×数量，代表市场真实成本基础。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>流通市值</strong>：当前价格 × 流通供应量</li>
+                        <li><strong>已实现市值</strong>：历史成交价格加权的"真实"市值</li>
+                        <li><strong>MVRV比率</strong>：流通市值 / 已实现市值</li>
+                        <li><strong>Z-Score</strong>：(MVRV - 历史均值) / 历史标准差</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>MVRV > 3.7</strong>：历史顶部区域，获利了结信号</li>
+                        <li><strong>MVRV 2.4-3.7</strong>：过热区域，谨慎乐观</li>
+                        <li><strong>MVRV 1.0-2.4</strong>：正常上升区域</li>
+                        <li><strong>MVRV 0.8-1.0</strong>：接近成本线，支撑较强</li>
+                        <li><strong>MVRV < 0.8</strong>：深度低估，历史底部区域</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>MVRV在牛市中期可能长期处于高位，需结合其他指标确认顶部。该指标更适合中长期投资决策，短期交易参考价值有限。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="new_mvrv_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 山寨币指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">🚀</span>
+                    山寨币指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">Alt相对BTC收益强弱与季节性，判断山寨币周期。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>通过比较前50名山寨币与BTC的相对表现，结合历史季节性规律，评估当前是否处于"山寨季"。反映资金在BTC和山寨币之间的流动偏好。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>相对强弱</strong>：山寨币收益 - BTC收益</li>
+                        <li><strong>胜率统计</strong>：跑赢BTC的山寨币占比</li>
+                        <li><strong>超额收益</strong>：山寨币指数vs BTC指数</li>
+                        <li><strong>季节性调整</strong>：历史同期表现权重</li>
+                        <li><strong>山寨季强度</strong>：综合评分0-100</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>强山寨季(>75)</strong>：山寨币全面跑赢，轮动激烈</li>
+                        <li><strong>弱山寨季(50-75)</strong>：部分山寨表现活跃</li>
+                        <li><strong>平衡期(25-50)</strong>：BTC与山寨表现相当</li>
+                        <li><strong>BTC主导(<25)</strong>：资金集中流向BTC</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>山寨季往往出现在牛市中后期，需警惕过度狂热。BTC主导期适合配置主流币，山寨季适合精选优质项目。关注监管政策对山寨币的影响。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="altcoin_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 交易所净流入图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">🔄</span>
+                    交易所净流入
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">净流入=链上流入-链上流出，反映资金流向偏好。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>基于成交量加权价格变化计算资金流向，结合价格动量和成交量强度评分，综合评估资金在交易所的流入流出状况。正值表示净流入，负值表示净流出。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>价格动量评分</strong>：基于涨跌幅的权重分配</li>
+                        <li><strong>成交量强度</strong>：相对历史成交量的活跃度</li>
+                        <li><strong>综合流向评分</strong>：价格动量×成交量强度</li>
+                        <li><strong>流入流出分离</strong>：正向流入vs负向流出</li>
+                        <li><strong>异常值处理</strong>：3σ原则剔除极值影响</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>大额净流入</strong>：新资金入场，看涨信号</li>
+                        <li><strong>持续净流入</strong>：资金配置增加，趋势向好</li>
+                        <li><strong>净流出加速</strong>：获利了结或恐慌出逃</li>
+                        <li><strong>流入流出平衡</strong>：市场观望，方向不明</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>该指标基于成交数据模拟，与真实链上数据存在偏差。大额流入未必立即推高价格，需观察资金停留时间和分布。结合持仓成本分析资金质量。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="new_exchange_flow_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 恐慌贪婪指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">😱</span>
+                    恐慌贪婪指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">波动/成交/搜索/占比等加权合成，衡量市场情绪极值。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>整合波动率、成交量、社交媒体情绪、市场主导地位、趋势强度等多维度数据，构建0-100的情绪指数。反映市场参与者的恐慌和贪婪程度。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>波动率(25%)</strong>：价格波动的情绪释放</li>
+                        <li><strong>成交量(25%)</strong>：交易活跃度变化</li>
+                        <li><strong>社交情绪(20%)</strong>：网络讨论热度和倾向</li>
+                        <li><strong>主导地位(15%)</strong>：BTC市值占比变化</li>
+                        <li><strong>趋势强度(15%)</strong>：技术面强弱判断</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>极度恐慌(0-25)</strong>：历史低点区域，潜在抄底机会</li>
+                        <li><strong>恐慌(25-45)</strong>：市场悲观，逢低布局</li>
+                        <li><strong>中性(45-55)</strong>：情绪均衡，观望为主</li>
+                        <li><strong>贪婪(55-75)</strong>：市场乐观，注意风险</li>
+                        <li><strong>极度贪婪(75-100)</strong>：情绪过热，警惕顶部</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>恐慌贪婪指数是经典的反向指标。极度恐慌时往往是最佳买点，极度贪婪时需要警惕调整。但极端情绪可能持续较长时间。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="fear_greed_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- AD百分比指标图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📊</span>
+                    AD百分比指标
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">AD%=新高数-新低数占比，衡量市场内在强弱动能。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>AD(Advance-Decline)百分比通过统计创新高与创新低的币种数量差值，评估市场内在强弱。正值表示创新高占优，负值表示创新低占优。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>新高统计</strong>：创N日新高的币种数量</li>
+                        <li><strong>新低统计</strong>：创N日新低的币种数量</li>
+                        <li><strong>AD差值</strong>：新高数量 - 新低数量</li>
+                        <li><strong>AD百分比</strong>：AD差值 / 总币种数量 × 100</li>
+                        <li><strong>AD累积线</strong>：AD值的累积求和</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>AD%>50</strong>：新高占优，市场内在强劲</li>
+                        <li><strong>AD% 0-50</strong>：新高略占优势，温和上升</li>
+                        <li><strong>AD% -50-0</strong>：新低略占优势，疲弱整理</li>
+                        <li><strong>AD%<-50</strong>：新低占优，市场内在脆弱</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>AD指标与价格可能出现背离。价格创新高而AD恶化，预示上涨乏力。价格创新低而AD改善，暗示筑底过程。需关注AD线的趋势变化。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="ad_percentage_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- AHR999指标图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">🎯</span>
+                    AHR999指标
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">价格相对算力与活跃度的分位，BTC投资时机指标。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>AHR999通过BTC价格与200日定投成本和拟合价格的比值，判断当前价格的合理性。该指标基于长期价值投资理念，适合判断买卖时机。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>200日定投成本</strong>：过去200天价格的算数平均</li>
+                        <li><strong>拟合价格</strong>：基于指数增长模型的理论价格</li>
+                        <li><strong>AHR999</strong>：(当前价格/200日定投成本) × (当前价格/拟合价格)</li>
+                        <li><strong>分位数</strong>：当前AHR999在历史数据中的排位</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>AHR999 < 0.45</strong>：抄底区域，历史最佳买点</li>
+                        <li><strong>AHR999 0.45-1.2</strong>：定投区域，适合分批建仓</li>
+                        <li><strong>AHR999 1.2-5.0</strong>：观望区域，持币待涨</li>
+                        <li><strong>AHR999 > 5.0</strong>：逃顶区域，考虑获利了结</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>AHR999适用于BTC长期投资，短期可能长时间处于单一区间。牛熊转换期间该指标最为有效，需结合其他技术指标确认入场时机。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="ahr999_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 极端移动比率图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">⚡</span>
+                    极端移动比率
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc" style="margin-bottom: 6px;">
+                <div class="desc-summary">单日绝对涨跌幅超过阈值的币种占比，用于衡量市场"极端情绪"的强弱与释放程度。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>统计当日绝对涨跌幅超过设定阈值（固定阈值或动态阈值）的币种数量及占比。极端比率的"尖峰"通常出现在阶段性顶部或底部附近，可作为市场情绪释放与拐点风险的参考。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>样本池</strong>：选取活跃交易币种（建议剔除稳定币/停牌/极低成交额标的，保证口径稳定）</li>
+                        <li><strong>涨跌幅</strong>：以24小时收益率或日线涨跌幅为准</li>
+                        <li><strong>固定阈值</strong>：±15%、±20%、±30% 等分层阈值</li>
+                        <li><strong>动态阈值</strong>：基于历史波动率的自适应阈值（如过去30日收益率波动的 k 倍标准差，默认 k≈2）</li>
+                        <li><strong>极端个数</strong>：满足 |涨跌幅| ≥ 阈值 的币种数量</li>
+                        <li><strong>极端比率</strong>：极端个数 / 样本总数 × 100%</li>
+                        <li><strong>风险等级</strong>：据极端比率区间打分（示例：&lt;5% 平静、5-15% 分化、15-30% 剧烈、&gt;30% 极端）</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>短期尖峰</strong>：常见于阶段顶部/底部附近。顶部多伴随"上涨极端"占比飙升，底部多伴随"下跌极端"占比飙升</li>
+                        <li><strong>持续高位</strong>：多为趋势后期的情绪透支信号，警惕反转或剧烈回撤</li>
+                        <li><strong>低位横盘</strong>：市场分歧小，趋势性机会较少，策略以等待为主</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>解读需结合市场背景：阈值与样本池口径应保持一致；建议与成交量/换手率及广度类指标（如涨跌比重、市场宽度）联立确认。动态阈值在波动收敛期更容易出现尖峰，需结合波动环境审慎判断。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="extreme_move_chart" style="height: 400px;"></div>
+        </div>
+
+
+        <!-- 盘口价差监控图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📊</span>
+                    盘口价差监控
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">买一卖一价差及其波动率，衡量交易摩擦成本。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>通过监控盘口买卖价差的大小和波动性，评估市场微观结构的健康程度。价差大小反映交易成本，价差波动反映流动性稳定性。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>模拟价差</strong>：基于(high-low)/close近似盘口价差</li>
+                        <li><strong>相对价差</strong>：价差/中位价×100%</li>
+                        <li><strong>价差波动率</strong>：价差序列的标准差</li>
+                        <li><strong>流动性评分</strong>：基于价差水平的质量评级</li>
+                        <li><strong>市场状态</strong>：极佳/良好/一般/较差/极差五档</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>价差收窄</strong>：流动性改善，交易成本降低</li>
+                        <li><strong>价差扩大</strong>：流动性恶化，市场摩擦增加</li>
+                        <li><strong>价差波动加剧</strong>：市场不稳定，流动性脆弱</li>
+                        <li><strong>价差趋于稳定</strong>：市场成熟，流动性充足</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>该指标基于K线数据模拟，与真实盘口存在差异。价差监控需结合成交量分析，低成交量下的窄价差可能是虚假流动性。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="spread_monitor_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- Y综合指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">🌟</span>
+                    Y综合指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">各子指标标准化后加权合成，提供全面市场分析视角。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>Y综合指数整合基础Y指数、资金费率、稳定币供应量、现货成交量等关键指标，通过标准化加权形成0-100分的综合评级，提供360度市场分析视角。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>基础Y指数(40%)</strong>：价格技术面综合评分</li>
+                        <li><strong>资金费率指标(20%)</strong>：多空情绪评估</li>
+                        <li><strong>稳定币供应(20%)</strong>：流动性基础评估</li>
+                        <li><strong>现货成交量(10%)</strong>：市场活跃度评估</li>
+                        <li><strong>其他因子(10%)</strong>：辅助修正因子</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>综合评分>80</strong>：全面强势，多维度确认上涨</li>
+                        <li><strong>综合评分60-80</strong>：偏强状态，趋势向好</li>
+                        <li><strong>综合评分40-60</strong>：中性区域，方向待定</li>
+                        <li><strong>综合评分20-40</strong>：偏弱状态，注意风险</li>
+                        <li><strong>综合评分<20</strong>：全面疲弱，规避风险</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>Y综合指数作为多因子模型，需关注各子指标的一致性。如果子指标出现严重分歧，需要重点分析分歧原因，可能预示市场转折。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="y_composite_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 高级市场指标图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">🔬</span>
+                    高级市场指标
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">拥挤度/换手率等高级因子合成，捕捉深层市场信号。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>整合市场拥挤度、换手率结构、持仓集中度、价格效率等高级因子，通过机器学习模型识别传统指标难以捕捉的深层市场信号和结构变化。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>拥挤度因子</strong>：基于持仓分布的拥挤程度</li>
+                        <li><strong>换手率结构</strong>：不同市值层级的换手率差异</li>
+                        <li><strong>价格效率</strong>：价格发现的有效性评估</li>
+                        <li><strong>流动性结构</strong>：深度流动性的分层分析</li>
+                        <li><strong>高级复合评分</strong>：多因子模型加权输出</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>结构优化</strong>：各维度指标协调向好</li>
+                        <li><strong>结构分化</strong>：部分因子出现背离预警</li>
+                        <li><strong>结构恶化</strong>：多个维度同时走弱</li>
+                        <li><strong>结构修复</strong>：负面因子逐步改善</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>高级市场指标具有前瞻性，但可能出现假信号。需要结合基础指标确认，避免过度解读单一因子的异常变化。适合专业投资者使用。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="advanced_indicators_chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- 市场涨跌幅指数图表 -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span class="chart-icon">📈</span>
+                    市场涨跌幅指数
+                </div>
+                <div class="chart-status normal">正常</div>
+            </div>
+            <!-- 详细指标说明 -->
+            <div class="chart-desc">
+                <div class="desc-summary">全市场日收益率加权均值，衡量整体市场表现。</div>
+                <div class="desc-details" style="display: none;">
+                    <h4>📊 核心原理</h4>
+                    <p>基于成交额前20名币种的涨跌幅，通过成交量加权计算市场整体表现指数。反映主流资金的收益水平和市场整体景气度。</p>
+                    
+                    <h4>💡 计算方法</h4>
+                    <ul>
+                        <li><strong>样本筛选</strong>：选择成交额前20的活跃币种</li>
+                        <li><strong>权重计算</strong>：基于7日平均成交额分配权重</li>
+                        <li><strong>收益率计算</strong>：1/7/30日等多周期涨跌幅</li>
+                        <li><strong>加权平均</strong>：成交额权重×收益率求和</li>
+                        <li><strong>趋势分析</strong>：收益率的变化趋势和波动特征</li>
+                    </ul>
+                    
+                    <h4>🎯 信号解读</h4>
+                    <ul>
+                        <li><strong>指数持续上升</strong>：市场整体向好，赚钱效应明显</li>
+                        <li><strong>指数震荡上行</strong>：稳健上升，波动可控</li>
+                        <li><strong>指数横盘整理</strong>：市场寻找方向，观望情绪浓厚</li>
+                        <li><strong>指数持续下跌</strong>：市场整体疲弱，亏钱效应扩散</li>
+                    </ul>
+                    
+                    <h4>⚠️ 注意事项</h4>
+                    <p>该指数反映主流币种表现，可能与小市值币种表现存在差异。在极端行情中，指数可能被个别权重较大的币种影响，需要结合市场宽度指标分析。</p>
+                </div>
+                <button class="desc-toggle" onclick="toggleDescription(this)">展开说明 ▼</button>
+            </div>
+            <div id="market_zdf_chart" style="height: 400px;"></div>
+        </div>
+
+    <div class="chart-container">
+        <div id="bbw_chart" style="height: 400px;"></div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-info">
+            © 2025 Y指数监控系统 | 数据来源：本地计算 + 链上数据 | 日志保存至本地data目录
+        </div>
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#" onclick="refreshAllData()">刷新数据</a>
+                <a href="#" onclick="showSystemInfo()">系统信息</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量 - 修正图表类型名称以匹配后端
+        const chartTypes = ['y_index', 'volatility', 'liquidity', 'market_breadth', 'new_mvrv', 'altcoin', 'new_exchange_flow', 'fear_greed', 'ad_percentage', 'ahr999', 'extreme_move', 'up_down_ratio', 'cross_section', 'spread_monitor', 'onchain_stablecoin', 'funding_rate', 'y_composite', 'advanced_indicators', 'market_zdf', 'bbw'];
+        const charts = {};
+
+        // 改进的数据获取和显示函数
+        /**
+         * 获取市场概览数据并更新前端卡片
+         * - 发起请求至`/api/market-overview`
+         * - 成功后更新概览卡片与最后更新时间
+         * - 失败时显示错误通知并渲染错误概览
+         * - 无论成功或失败均在finally中隐藏加载遮罩
+         * - 请求超时设为15秒，与AbortController一致
+         */
+        async function fetchMarketOverview() {
+            try {
+                showLoading('正在获取市场概览数据...');
+
+                // 增加超时控制与取消机制，避免前端一直转圈
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch('/api/market-overview', { signal: controller.signal });
+                clearTimeout(timeout);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result && result.data) {
+                    updateOverviewCards(result.data);
+                    updateLastUpdateTime(result.timestamp || new Date().toLocaleString());
+                    showNotification('市场概览数据更新成功', 'success');
+                } else {
+                    throw new Error(result && result.error ? result.error : '获取数据失败');
+                }
+                
+            } catch (error) {
+                const msg = error && error.name === 'AbortError' ? '请求超时(15秒)' : (error && error.message ? error.message : '未知错误');
+                console.error('获取市场概览失败:', error);
+                showNotification(`获取市场概览失败: ${msg}`, 'error');
+                showErrorOverview();
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * 更新概览卡片数据
+         * @param {Object} data - 市场概览数据
+         */
+        function updateOverviewCards(data) {
+            try {
+                // Y指数
+                if (data.y_index) {
+                    updateCard('y-index-card', 'Y 指数', '📊', 
+                        data.y_index.value, 
+                        data.y_index.change, 
+                        data.y_index.signal, 
+                        data.y_index.compare);
+                }
+
+                // MVRV
+                if (data.mvrv) {
+                    updateCard('mvrv-card', 'MVRV', '💎', 
+                        data.mvrv.value, 
+                        data.mvrv.change, 
+                        data.mvrv.signal, 
+                        data.mvrv.compare);
+                }
+
+                // 稳定币供应量
+                if (data.stablecoin_supply) {
+                    updateCard('stablecoin-card', '稳定币供应量', '💰', 
+                        data.stablecoin_supply.value, 
+                        data.stablecoin_supply.change, 
+                        data.stablecoin_supply.level, 
+                        data.stablecoin_supply.compare);
+                }
+
+                // 交易所净流入
+                if (data.exchange_flow) {
+                    updateCard('exchange-flow-card', '交易所净流入', '🏛️', 
+                        data.exchange_flow.value, 
+                        data.exchange_flow.change, 
+                        data.exchange_flow.signal, 
+                        data.exchange_flow.compare);
+                }
+
+                // 恐慌贪婪指数
+                if (data.fear_greed) {
+                    updateCard('fear-greed-card', '恐慌贪婪指数', '😱', 
+                        data.fear_greed.value, 
+                        data.fear_greed.change, 
+                        data.fear_greed.level, 
+                        data.fear_greed.compare);
+                }
+
+                // 山寨币指数
+                if (data.altcoin) {
+                    updateCard('altcoin-card', '山寨币指数', '🌟', 
+                        data.altcoin.value, 
+                        data.altcoin.change, 
+                        data.altcoin.signal, 
+                        data.altcoin.compare);
+                }
+
+                // 波动率指数（对象式）
+                if (data.volatility) {
+                    updateCard('volatility', {
+                        title: '波动率指数',
+                        icon: '📈',
+                        value: data.volatility.value,
+                        change: data.volatility.change,
+                        status: data.volatility.status,
+                        compare: data.volatility.compare
+                    });
+                }
+
+                // 流动性指数（对象式）
+                if (data.liquidity) {
+                    updateCard('liquidity', {
+                        title: '流动性指数',
+                        icon: '💧',
+                        value: data.liquidity.value,
+                        change: data.liquidity.change,
+                        status: data.liquidity.status,
+                        compare: data.liquidity.compare
+                    });
+                }
+
+                // 市场宽度指数（对象式）
+                if (data.market_breadth) {
+                    updateCard('market-breadth', {
+                        title: '市场宽度指数',
+                        icon: '📏',
+                        value: data.market_breadth.value,
+                        change: data.market_breadth.change,
+                        status: data.market_breadth.status,
+                        compare: data.market_breadth.compare
+                    });
+                }
+
+                // 市场涨跌幅指数（对象式）
+                if (data.market_zdf) {
+                    updateCard('market-zdf', {
+                        title: '市场涨跌幅指数',
+                        icon: '📊',
+                        value: data.market_zdf.value,
+                        change: data.market_zdf.change,
+                        status: data.market_zdf.status,
+                        compare: data.market_zdf.compare
+                    });
+                }
+
+                // AD百分比
+                if (data.ad_percentage) {
+                    updateCard('ad-percentage-card', 'AD百分比', '⚖️', 
+                        data.ad_percentage.value, 
+                        data.ad_percentage.change, 
+                        data.ad_percentage.signal, 
+                        data.ad_percentage.compare);
+                }
+
+                // 盘口价差监控
+                if (data.spread_monitor) {
+                    updateCard('spread-monitor-card', '盘口价差监控', '📏', 
+                        data.spread_monitor.value, 
+                        data.spread_monitor.change, 
+                        data.spread_monitor.level, 
+                        data.spread_monitor.compare);
+                }
+
+                // 资金费率监控
+                if (data.funding_rate) {
+                    updateCard('funding-rate-card', '资金费率监控', '💹', 
+                        data.funding_rate.value, 
+                        data.funding_rate.change, 
+                        data.funding_rate.level, 
+                        data.funding_rate.compare);
+                }
+
+                // AHR999
+                if (data.ahr999) {
+                    updateCard('ahr999-card', 'AHR999', '📈', 
+                        data.ahr999.value, 
+                        data.ahr999.change, 
+                        data.ahr999.signal, 
+                        data.ahr999.compare);
+                }
+
+                // 新增：BBW（布林带宽度）
+                if (data.bbw) {
+                    updateCard('bbw-card', 'BBW 布林带宽度', '📏',
+                        data.bbw.value,
+                        data.bbw.change,
+                        data.bbw.signal || data.bbw.level || data.bbw.status,
+                        data.bbw.compare
+                    );
+                }
+
+                // 极值比率
+                if (data.extreme_ratio) {
+                    updateCard('extreme-ratio-card', '极值比率', '⚡', 
+                        data.extreme_ratio.value, 
+                        data.extreme_ratio.change, 
+                        data.extreme_ratio.level, 
+                        data.extreme_ratio.compare);
+                }
+
+                // 涨跌比重
+                if (data.up_down_ratio) {
+                    updateCard('up-down-ratio-card', '涨跌比重', '⚖️', 
+                        data.up_down_ratio.value, 
+                        data.up_down_ratio.change, 
+                        data.up_down_ratio.signal, 
+                        data.up_down_ratio.compare);
+                }
+
+                // 横截面差异指数
+                if (data.cross_section) {
+                    updateCard('cross-section-card', '横截面差异指数', '🔀', 
+                        data.cross_section.value, 
+                        data.cross_section.change, 
+                        data.cross_section.level, 
+                        data.cross_section.compare);
+                }
+
+                // 链上稳定币供应量卡片
+                if (data.onchain_stablecoin) {
+                    updateCard(
+                        'onchain-stablecoin-card',
+                        '链上稳定币供应量',
+                        '💰',
+                        data.onchain_stablecoin.value,
+                        data.onchain_stablecoin.change,
+                        data.onchain_stablecoin.status,
+                        data.onchain_stablecoin.compare
+                    );
+                }
+
+                // Y综合指数卡片
+                if (data.y_composite) {
+                    // 传入 compare 以启用 7日/30日对比渲染
+                    updateCard('y-composite-card', 'Y综合指数', '🎯',
+                        data.y_composite.value,
+                        data.y_composite.change,
+                        data.y_composite.status,
+                        data.y_composite.compare
+                    );
+                }
+
+                // 高级指标卡片
+                if (data.advanced_indicators) {
+                    updateAdvancedCard(
+                        data.advanced_indicators.value,
+                        data.advanced_indicators.change,
+                        data.advanced_indicators.status,
+                        data.advanced_indicators.compare
+                    );
+                }
+
+                // MVRVY指标卡片
+                // 已删除 MVRVY 卡片更新逻辑
+
+                // 新交易所流入流出卡片
+                if (data.new_exchange_flow) {
+                    updateCard('new-exchange-flow-card', '新交易所流入流出', '🔄', data.new_exchange_flow.value, data.new_exchange_flow.change, data.new_exchange_flow.status);
+                }
+
+                // 新MVRV卡片
+                if (data.new_mvrv) {
+                    updateCard('new-mvrv-card', '新MVRV指标', '💎', data.new_mvrv.value, data.new_mvrv.change, data.new_mvrv.status);
+                }
+
+            } catch (error) {
+                console.error('更新概览卡片失败:', error);
+                showNotification('更新概览卡片失败', 'error');
+            }
+        }
+
+        /**
+         * 通用卡片更新函数（兼容两种调用方式）
+         *
+         * 调用方式A（对象式，旧方式）:
+         *   updateCard('y-index', { title, icon, value, change, signal/status/level, ... })
+         *
+         * 调用方式B（多参数式，当前代码使用）:
+         *   updateCard('y-index-card', 'Y指数', '📈', value, change, signalOrStatusOrLevel, compare)
+         *
+         * @param {string} cardIdOrElementId - 基础id或完整元素id（如 'y-index' 或 'y-index-card'）
+         * @param {Object|string} cardDataOrTitle - 对象（旧方式）或标题字符串（新方式）
+         * @param {string} [icon] - 图标（仅新方式）
+         * @param {number|string} [value] - 主值（仅新方式）
+         * @param {number|string} [change] - 变化率（仅新方式）
+         * @param {string} [signalOrStatusOrLevel] - 信号/状态/等级（仅新方式）
+         * @param {Object} [compare] - 7日/30日对比数据（仅新方式）
+         */
+        function updateCard(cardIdOrElementId, cardDataOrTitle, icon, value, change, signalOrStatusOrLevel, compare) {
+            let elementId;
+            let cardData;
+
+            if (typeof cardDataOrTitle === 'object' && cardDataOrTitle !== null) {
+                // 旧方式：传对象；如果没带 -card，自动补上
+                elementId = cardIdOrElementId.endsWith('-card')
+                    ? cardIdOrElementId
+                    : `${cardIdOrElementId}-card`;
+                cardData = cardDataOrTitle;
+            } else {
+                // 新方式：多参数；cardIdOrElementId 已是完整 dom id，直接使用
+                elementId = cardIdOrElementId;
+                cardData = {
+                    title: cardDataOrTitle,
+                    icon: icon,
+                    value: value,
+                    change: change,
+                    signal: signalOrStatusOrLevel,
+                    status: signalOrStatusOrLevel,
+                    level: signalOrStatusOrLevel,
+                    compare: compare
+                };
+            }
+
+            const card = document.getElementById(elementId);
+            if (!card) {
+                console.warn(`未找到卡片元素: ${elementId}`);
+                return;
+            }
+
+            // 更新标题和图标
+            const titleElement = card.querySelector('.overview-card-title');
+            if (titleElement) {
+                const iconHtml = cardData.icon ? `<span class="overview-card-icon">${cardData.icon}</span>` : '';
+                titleElement.innerHTML = `${iconHtml}${cardData.title || ''}`;
+            }
+
+            // 更新主要数值 - 特殊处理 fear-greed 和 altcoin
+            const valueElement = card.querySelector('.overview-card-value');
+            if (valueElement) {
+                if (elementId === 'fear-greed-card') {
+                    const v = cardData.value !== undefined ? cardData.value : 'N/A';
+                    const lvl = cardData.level || cardData.status || cardData.signal || '未知';
+                    valueElement.innerHTML = `${v} <small>(${lvl})</small>`;
+                } else if (elementId === 'altcoin-card') {
+                    if (cardData.month !== undefined || cardData.season !== undefined || cardData.year !== undefined || cardData.index !== undefined) {
+                        valueElement.innerHTML = `
+                            <div style="font-size: 0.8em; line-height: 1.2;">
+                                <div>月度: ${cardData.month ?? 'N/A'}</div>
+                                <div>季度: ${cardData.season ?? 'N/A'}</div>
+                                <div>年度: ${cardData.year ?? 'N/A'}</div>
+                                <div>指数: ${cardData.index ?? (cardData.value ?? 'N/A')}</div>
+                            </div>
+                        `;
+                    } else {
+                        valueElement.textContent = cardData.value ?? 'N/A';
+                    }
+                } else if (elementId === 'spread-monitor-card') {
+                    /**
+                     * 将盘口价差监控主值从 bp 转换为百分比并显示
+                     * 例：885.32 bp -> 8.85%
+                     */
+                    const v = parseFloat(cardData.value);
+                    if (isNaN(v)) {
+                        valueElement.textContent = 'N/A';
+                    } else {
+                        const percent = v / 100; // bp -> %
+                        valueElement.textContent = `${percent.toFixed(2)}%`;
+                    }
+                } else if (elementId === 'funding-rate-card') {
+                    /**
+                     * 资金费率：后端传入为小数（如 0.004 表示 0.40%）
+                     * 主值按百分比显示：value * 100 后保留两位小数并加 '%'
+                     */
+                    const v = parseFloat(cardData.value);
+                    if (isNaN(v)) {
+                        valueElement.textContent = 'N/A';
+                    } else {
+                        valueElement.textContent = `${(v * 100).toFixed(2)}%`;
+                    }
+                } else if (elementId === 'exchange-flow-card') {
+                    // 交易所净流入：显示单位（例如 亿美元），避免误读
+                    const v = cardData.value ?? 'N/A';
+                    const unit = cardData.unit || '';
+                    valueElement.textContent = unit ? `${v}${unit}` : v;
+                } else {
+                    valueElement.textContent = cardData.value ?? 'N/A';
+                }
+            }
+
+            // 更新变化率 - 数据验证与限制
+            const changeElement = card.querySelector('.overview-card-change');
+            if (changeElement && cardData.change !== undefined) {
+                let changeValue = parseFloat(cardData.change);
+                if (isNaN(changeValue) || !isFinite(changeValue)) {
+                    console.warn(`无效的变化率数据: ${cardData.change} for ${elementId}`);
+                    changeValue = 0;
+                }
+                // 资金费率专用：后端传入变化为小数差额，前端按“百分点”显示
+                if (elementId === 'funding-rate-card') {
+                    changeValue = changeValue * 100;
+                }
+                if (Math.abs(changeValue) > 100) {
+                    console.warn(`检测到异常变化率: ${changeValue}% for ${elementId}, 限制为±99%`);
+                    changeValue = Math.sign(changeValue) * Math.min(Math.abs(changeValue), 99);
+                }
+                changeValue = Math.max(-99.99, Math.min(99.99, changeValue));
+
+                const changeClass = changeValue > 0 ? 'positive' : changeValue < 0 ? 'negative' : 'neutral';
+                const changeSymbol = changeValue > 0 ? '↗' : changeValue < 0 ? '↘' : '→';
+
+                changeElement.className = `overview-card-change ${changeClass}`;
+                changeElement.innerHTML = `
+                    <span class="trend-arrow ${changeValue > 0 ? 'up' : changeValue < 0 ? 'down' : 'flat'}">
+                        ${changeSymbol}
+                    </span>
+                    ${Math.abs(changeValue).toFixed(2)}%
+                `;
+            }
+
+            // 更新信号或状态
+            const statusElement = card.querySelector('.status-indicator');
+            if (statusElement) {
+                if (cardData.signal) {
+                    const signalClass = getSignalClass(cardData.signal);
+                    const signalText = getSignalDisplay(cardData.signal);
+                    statusElement.className = `status-indicator ${signalClass}`;
+                    statusElement.innerHTML = `
+                        <span class="status-dot"></span>
+                        ${signalText}
+                    `;
+                } else if (elementId === 'fear-greed-card' && cardData.level) {
+                    statusElement.className = `status-indicator ${getLevelClass(cardData.level)}`;
+                    statusElement.innerHTML = `
+                        <span class="status-dot"></span>
+                        ${cardData.level}
+                    `;
+                } else if (cardData.status) {
+                    const statusText = cardData.status === 'normal' ? '正常' :
+                                       cardData.status === 'unavailable' ? '无数据' : '未知';
+                    statusElement.className = `status-indicator ${getStatusClass(cardData.status)}`;
+                    statusElement.innerHTML = `
+                        <span class="status-dot"></span>
+                        ${statusText}
+                    `;
+                }
+            }
+
+            // 渲染7日/30日对比区域（增强版，支持点击提示）
+            if (cardData.compare && (cardData.compare.day_7 || cardData.compare.day_30)) {
+                let comparisonHtml = '<div class="overview-card-comparison">';
+                const cardTitle = (typeof cardDataOrTitle === 'string')
+                    ? cardDataOrTitle
+                    : ((cardDataOrTitle && cardDataOrTitle.title) ? cardDataOrTitle.title : (cardData.title || ''));
+
+                if (cardData.compare.day_7) {
+                    const direction = cardData.compare.day_7.direction;
+                    let displayText = '';
+                    let className = direction;
+                    
+                    if (direction === 'anomaly') {
+                        displayText = '数据异常';
+                        className = 'anomaly';
+                    } else {
+                        displayText = `${cardData.compare.day_7.change > 0 ? '+' : ''}${cardData.compare.day_7.change}%`;
+                    }
+                    
+                    comparisonHtml += `
+                        <div class="comparison-item"
+                             data-label="7日"
+                             data-type="day_7"
+                             data-change="${cardData.compare.day_7.change}"
+                             data-direction="${direction}"
+                             data-title="${cardTitle}">
+                            <span class="comparison-label">7日</span>
+                            <span class="comparison-value ${className}">
+                                ${displayText}
+                                ${direction !== 'anomaly' ? `<span class="comparison-arrow ${direction}"></span>` : ''}
+                            </span>
+                        </div>
+                    `;
+                }
+
+                if (cardData.compare.day_30) {
+                    const direction = cardData.compare.day_30.direction;
+                    let displayText = '';
+                    let className = direction;
+                    
+                    if (direction === 'anomaly') {
+                        displayText = '数据异常';
+                        className = 'anomaly';
+                    } else {
+                        displayText = `${cardData.compare.day_30.change > 0 ? '+' : ''}${cardData.compare.day_30.change}%`;
+                    }
+                    
+                    comparisonHtml += `
+                        <div class="comparison-item"
+                             data-label="30日"
+                             data-type="day_30"
+                             data-change="${cardData.compare.day_30.change}"
+                             data-direction="${direction}"
+                             data-title="${cardTitle}">
+                            <span class="comparison-label">30日</span>
+                            <span class="comparison-value ${className}">
+                                ${displayText}
+                                ${direction !== 'anomaly' ? `<span class="comparison-arrow ${direction}"></span>` : ''}
+                            </span>
+                        </div>
+                    `;
+                }
+
+                comparisonHtml += '</div>';
+
+                // 插入对比区域到卡片末尾
+                const existingComparison = card.querySelector('.overview-card-comparison');
+                if (existingComparison) {
+                    existingComparison.remove();
+                }
+                card.insertAdjacentHTML('beforeend', comparisonHtml);
+
+                // 绑定点击事件：点击后弹出提示，展示周期、数值和方向
+                const comparisonItems = card.querySelectorAll('.comparison-item');
+                comparisonItems.forEach((el) => {
+                    el.addEventListener('click', () => {
+                        const label = el.getAttribute('data-label') || '';
+                        const title = el.getAttribute('data-title') || '';
+                        const changeVal = parseFloat(el.getAttribute('data-change') || '0');
+                        const direction = el.getAttribute('data-direction') || 'flat';
+                        onComparisonItemClick(label, title, changeVal, direction);
+                    });
+                });
+            }
+        }
+
+        // 新增：高级指标卡片更新函数（包装通用 updateCard）
+        /**
+         * 更新“高级指标”概览卡片
+         * 封装通用的 updateCard 调用，避免直接操作 DOM 细节，并保持与其他卡片一致的格式。
+         *
+         * @param {number|string} value   - 主值（如市值加权指数当日值）
+         * @param {number|string} change  - 日变化幅度（百分比或数值）
+         * @param {string}        status  - 状态/信号/等级（如 'normal' | 'unavailable' 或具体信号）
+         * @param {Object}        compare - 对比信息（可选，结构如 { day_7: { change, direction }, day_30: {...} }）
+         */
+        function updateAdvancedCard(value, change, status, compare) {
+            try {
+                updateCard(
+                    'advanced-indicators-card', // DOM 元素ID，已在模板中定义
+                    '高级指标',                  // 标题
+                    '🔬',                        // 图标
+                    value,
+                    change,
+                    status,                      // 作为 signal/status/level 统一传入
+                    compare
+                );
+            } catch (err) {
+                console.error('updateAdvancedCard 调用失败:', err);
+            }
+        }
+
+        /**
+         * 处理 7日/30日对比项点击事件
+         *
+         * @param {string} label - 周期标签（如：'7日'、'30日'）
+         * @param {string} title - 卡片标题（如：'稳定币供应量'）
+         * @param {number} changeVal - 变化百分比（正负数）
+         * @param {'up'|'down'|'flat'} direction - 方向（上升/下降/持平）
+         *
+         * 功能：
+         * - 统一格式化提示信息
+         * - 调用全局 showNotification 显示点击反馈（若不存在则退化为 console.log）
+         */
+        function onComparisonItemClick(label, title, changeVal, direction) {
+            let directionText = '持平';
+            if (direction === 'up') directionText = '上升';
+            else if (direction === 'down') directionText = '下降';
+
+            const sign = changeVal > 0 ? '+' : '';
+            const message = `${title} - ${label}: ${sign}${(Number.isFinite(changeVal) ? changeVal.toFixed(2) : changeVal)}%（${directionText}）`;
+            if (typeof showNotification === 'function') {
+                showNotification(message, 'info');
+            } else {
+                console.log(message);
+            }
+        }
+
+        // 创建状态指示器
+        function createStatusIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'status-indicator';
+            return indicator;
+        }
+
+        // 获取信号对应的CSS类（兼容中英文）
+        function getSignalClass(signal) {
+            const s = String(signal || '').toLowerCase();
+            const map = {
+                '看涨': 'bullish',
+                'bullish': 'bullish',
+                '多头': 'bullish',
+                '看跌': 'bearish',
+                'bearish': 'bearish',
+                '空头': 'bearish',
+                '中性': 'neutral',
+                'neutral': 'neutral',
+                '未知': 'neutral',
+                'unknown': 'neutral',
+                '数据错误': 'neutral',
+                'error': 'neutral',
+                '无数据': 'neutral',
+                'no_data': 'neutral',
+                'no data': 'neutral'
+            };
+            return map[s] || 'neutral';
+        }
+
+        // 获取信号显示文本（将英文映射为中文）
+        function getSignalDisplay(signal) {
+            const cnSet = new Set(['看涨', '看跌', '中性', '未知', '数据错误', '无数据']);
+            if (cnSet.has(signal)) return signal;
+            const s = String(signal || '').toLowerCase();
+            const map = {
+                'bullish': '看涨',
+                'bearish': '看跌',
+                'neutral': '中性',
+                'unknown': '未知',
+                'error': '数据错误',
+                'no_data': '无数据',
+                'no data': '无数据'
+            };
+            return map[s] || '未知';
+        }
+
+        // 获取等级对应的CSS类（恐慌贪婪指数）
+        function getLevelClass(level) {
+            const levelMap = {
+                '极度恐慌': 'bearish',
+                '恐慌': 'bearish',
+                '中性': 'neutral',
+                '贪婪': 'bullish',
+                '极度贪婪': 'bullish',
+                '未知': 'neutral'
+            };
+            return levelMap[level] || 'neutral';
+        }
+
+        // 获取状态对应的CSS类
+        function getStatusClass(status) {
+            const statusMap = {
+                'normal': 'bullish',
+                'unavailable': 'neutral',
+                'unknown': 'neutral'
+            };
+            return statusMap[status] || 'neutral';
+        }
+
+        // 格式化大数字
+        function formatLargeNumber(num) {
+            if (typeof num !== 'number' || isNaN(num)) return 'N/A';
+            
+            if (num >= 1e12) {
+                return (num / 1e12).toFixed(2) + 'T';
+            } else if (num >= 1e9) {
+                return (num / 1e9).toFixed(2) + 'B';
+            } else if (num >= 1e6) {
+                return (num / 1e6).toFixed(2) + 'M';
+            } else if (num >= 1e3) {
+                return (num / 1e3).toFixed(2) + 'K';
+            }
+            return num.toFixed(2);
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <span class="notification-icon">${getNotificationIcon(type)}</span>
+                    <span class="notification-message">${message}</span>
+                </div>
+            `;
+            
+            // 添加通知样式
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                max-width: 400px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            `;
+            
+            // 设置背景色
+            const colors = {
+                success: '#27ae60',
+                error: '#e74c3c',
+                warning: '#f39c12',
+                info: '#3498db'
+            };
+            notification.style.background = colors[type] || colors.info;
+            
+            document.body.appendChild(notification);
+            
+            // 显示动画
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 获取通知图标
+        function getNotificationIcon(type) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            return icons[type] || icons.info;
+        }
+
+        // 改进的加载状态显示
+        function showLoading(message = '正在加载数据...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = overlay.querySelector('.loading-text');
+            
+            if (text) {
+                text.textContent = message;
+            }
+            
+            overlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('hidden');
+        }
+
+        // 更新最后更新时间
+        function updateLastUpdateTime(timestamp) {
+            const timeElement = document.getElementById('last-update-time');
+            if (timeElement) {
+                timeElement.textContent = `最后更新: ${timestamp}`;
+            }
+        }
+
+        // 显示错误状态的概览
+        function showErrorOverview() {
+            const cards = document.querySelectorAll('.overview-card');
+            cards.forEach(card => {
+                const valueElement = card.querySelector('.overview-card-value');
+                if (valueElement) {
+                    valueElement.textContent = '数据获取失败';
+                    valueElement.style.color = '#e74c3c';
+                }
+            });
+        }
+
+        /**
+         * 获取图表数据并更新图表
+         * @param {string} chartType - 图表类型
+         */
+        async function fetchChartData(chartType) {
+            try {
+                // 将极端移动比率的前端类型映射为后端已实现的类型
+                const apiType = chartType === 'extreme_move' ? 'extreme_ratio' : chartType;
+
+                const response = await fetch(`/api/chart-data?chart_type=${apiType}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.warn(`图表数据获取失败 ${chartType}:`, data.error);
+                    // 对于盘口价差监控，显示空图表而不是PNG
+                    if (chartType === 'spread_monitor') {
+                        updateChart(chartType, {
+                            dates: [],
+                            average_spread: [],
+                            spread_volatility: []
+                        });
+                    }
+                    return;
+                }
+
+                // 对于盘口价差监控，确保数据结构完整
+                if (chartType === 'spread_monitor') {
+                    // 确保必要的字段存在
+                    data.dates = data.dates || [];
+                    data.average_spread = data.average_spread || [];
+                    data.spread_volatility = data.spread_volatility || [];
+                }
+                
+                updateChart(chartType, data);
+                
+            } catch (error) {
+                console.error(`获取图表数据失败 ${chartType}:`, error);
+                // 异常情况下也显示空图表
+                if (chartType === 'spread_monitor') {
+                    updateChart(chartType, {
+                        dates: [],
+                        average_spread: [],
+                        spread_volatility: []
+                    });
+                }
+            }
+        }
+
+        /**
+         * 清理指定图表类型的 ECharts 实例与容器内容
+         * - 若存在实例则 dispose，随后清空容器 innerHTML
+         */
+        function clearChart(chartType) {
+            try {
+                if (charts && charts[chartType]) {
+                    charts[chartType].dispose();
+                    delete charts[chartType];
+                }
+            } catch (e) {
+                console.warn('dispose 图表实例失败', e);
+            }
+            const el = document.getElementById(`${chartType}_chart`);
+            if (el) el.innerHTML = '';
+        }
+
+        /**
+         * 更新图表：构建 ECharts 配置并针对特定图表类型定制样式
+         * - 对 extreme_move（极端移动比率）启用百分比坐标轴与百分比提示框
+         * - 对 spread_monitor（盘口价差监控）支持空数据显示
+         * @param {string} chartType - 图表类型（如 'extreme_move'）
+         * @param {Object} data - 后端返回的数据对象
+         * @returns {void}
+         */
+        function updateChart(chartType, data) {
+            const chartId = `${chartType}_chart`;
+            const chartElement = document.getElementById(chartId);
+            
+            if (!chartElement) return;
+            
+            // 初始化图表
+            if (!charts[chartType]) {
+                charts[chartType] = echarts.init(chartElement);
+            }
+            
+            const chart = charts[chartType];
+            
+            // 配置图表选项
+            const option = {
+                color: ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#8e44ad', '#1abc9c', '#9b59b6', '#e67e22'],
+                title: {
+                    text: getChartTitle(chartType),
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' },
+                    axisPointer: {
+                        type: 'cross',
+                        label: {
+                            backgroundColor: 'rgba(0,0,0,0.6)'
+                        }
+                    }
+                },
+                legend: {
+                    top: 30,
+                    textStyle: { fontSize: 12 }
+                },
+                grid: {
+                    top: 60,
+                    left: 40,
+                    right: 30,
+                    bottom: 30,
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: data.dates || [],
+                    boundaryGap: false,
+                    axisLabel: {
+                        rotate: 45,
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { fontSize: 10 },
+                    splitLine: {
+                        lineStyle: { color: 'rgba(0,0,0,0.08)' }
+                    }
+                },
+                series: getChartSeries(chartType, data),
+                animation: true,
+                animationDuration: 500
+            };
+
+            // 极端移动比率：百分比坐标轴 + 百分比 tooltip（不改动 legend/grid）
+            if (chartType === 'extreme_move') {
+                option.yAxis = {
+                    type: 'value',
+                    min: 0,
+                    max: 1,
+                    axisLabel: {
+                        fontSize: 10,
+                        formatter: function (val) {
+                            return (val * 100).toFixed(0) + '%';
+                        }
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } }
+                };
+                option.tooltip = {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' },
+                    axisPointer: { type: 'cross', label: { backgroundColor: 'rgba(0,0,0,0.6)' } },
+                    formatter: function (params) {
+                        if (!params || !params.length) return '';
+                        const date = params[0].axisValue || '';
+                        const lines = params.map(p => {
+                            const raw = Array.isArray(p.data) ? p.data[1] : p.value;
+                            const v = (raw == null ? 0 : raw) * 100;
+                            return `${p.marker} ${p.seriesName}: ${v.toFixed(2)}%`;
+                        });
+                        return `${date}<br/>` + lines.join('<br/>');
+                    }
+                };
+            }
+
+            // 盘口价差监控：基点(bp)坐标轴 + bp tooltip + 空数据处理
+            if (chartType === 'spread_monitor') {
+                option.yAxis = {
+                    type: 'value',
+                    axisLabel: {
+                        fontSize: 10,
+                        formatter: function (val) {
+                            return (val == null ? '' : (Number(val).toFixed(0) + ' bp'));
+                        }
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } }
+                };
+                option.tooltip = {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' },
+                    axisPointer: { type: 'cross', label: { backgroundColor: 'rgba(0,0,0,0.6)' } },
+                    formatter: function (params) {
+                        if (!params || !params.length) return '';
+                        const date = params[0].axisValue || '';
+                        const lines = params.map(p => {
+                            const raw = Array.isArray(p.data) ? p.data[1] : p.value;
+                            const v = (raw == null ? 0 : raw);
+                            return `${p.marker} ${p.seriesName}: ${v.toFixed(2)} bp`;
+                        });
+                        return `${date}<br/>` + lines.join('<br/>');
+                    }
+                };
+                
+                // 添加调试日志
+                console.log('Spread Monitor Data:', data);
+                console.log('Dates length:', data.dates ? data.dates.length : 0);
+                console.log('Average spread length:', data.average_spread ? data.average_spread.length : 0);
+                console.log('Spread volatility length:', data.spread_volatility ? data.spread_volatility.length : 0);
+                
+                // 修改空数据判断逻辑，更加宽松
+                const hasValidData = data.dates && data.dates.length > 0 && 
+                                    (data.average_spread && data.average_spread.length > 0 || 
+                                     data.spread_volatility && data.spread_volatility.length > 0);
+                
+                if (!hasValidData) {
+                    console.warn('Spread monitor data validation failed:', {
+                        dates: data.dates,
+                        average_spread: data.average_spread,
+                        spread_volatility: data.spread_volatility
+                    });
+                    
+                    option.graphic = {
+                        type: 'text',
+                        left: 'center',
+                        top: 'middle',
+                        style: {
+                            text: '暂无价差监控数据\n请稍后重试或检查数据源',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            fill: '#bdc3c7',
+                            textAlign: 'center'
+                        }
+                    };
+                }
+            }
+
+            /**
+             * BBW 图表：使用百分比坐标轴与百分比提示框
+             * - BBW 为无量纲比值，前端以 % 展示
+             */
+            if (chartType === 'bbw') {
+                // Y 轴以百分比显示
+                option.yAxis = {
+                    type: 'value',
+                    min: 0,
+                    axisLabel: {
+                        fontSize: 10,
+                        formatter: function (val) {
+                            return (val * 100).toFixed(2) + '%';
+                        }
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } }
+                };
+                // tooltip 统一用百分比显示
+                option.tooltip = {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' },
+                    axisPointer: { type: 'cross', label: { backgroundColor: 'rgba(0,0,0,0.6)' } },
+                    formatter: function (params) {
+                        if (!params || !params.length) return '';
+                        const date = params[0].axisValue || '';
+                        const lines = params.map(p => {
+                            // 兼容 [date, value] 或纯数值
+                            const raw = Array.isArray(p.data) ? p.data[1] : p.value;
+                            const v = (raw == null ? 0 : raw) * 100;
+                            return `${p.marker} ${p.seriesName}: ${v.toFixed(2)}%`;
+                        });
+                        return `${date}<br/>` + lines.join('<br/>');
+                    }
+                };
+            }
+            
+            chart.setOption(option);
+        }
+
+        // 获取图表标题
+        function getChartTitle(chartType) {
+            const titles = {
+                'y_index': 'Y指数趋势',
+                'volatility': '波动率指数',
+                'liquidity': '流动性指数',
+                'market_breadth': '市场宽度指数',
+                'new_mvrv': 'MVRV指标',
+                'altcoin': '山寨币指数',
+                'exchange_flow': '交易所净流入',
+                'new_exchange_flow': '交易所净流入',
+                'fear_greed': '恐慌贪婪指数',
+                'ad_percentage': 'AD百分比',
+                'ahr999': 'AHR999指标',
+                'bbw': 'BBW(布林带宽度)',
+                'extreme_move': '极端移动比率',
+                'up_down_ratio': '涨跌比率',
+                'cross_section': '横截面差异指数',
+                'spread_monitor': '价差监控',
+                'onchain_stablecoin': '链上稳定币供应量',
+                'funding_rate': '资金费率',
+                'y_composite': 'Y综合指数',
+                'advanced_indicators': '高级指标',
+                'market_zdf': '市场涨跌幅'
+            };
+            return titles[chartType] || chartType;
+        }
+
+        /**
+         * 根据图表类型生成 ECharts 系列配置
+         * - 对 extreme_move（极端移动比率）应用加粗线、渐变面积、LTTB 采样以及阈值与高亮区域
+         * @param {string} chartType - 图表类型
+         * @param {Object} data - 对应图表的数据
+         * @returns {Array} ECharts series 数组
+         */
+        function getChartSeries(chartType, data) {
+            const baseLine = {
+                type: 'line',
+                smooth: true,
+                symbol: 'none',
+                lineStyle: {
+                    width: 2,
+                    shadowColor: 'rgba(0,0,0,0.15)',
+                    shadowBlur: 6,
+                    shadowOffsetY: 2
+                },
+                areaStyle: { opacity: 0.08 },
+                emphasis: { focus: 'series' }
+            };
+
+            const series = [];
+
+            // 通用单系列
+            if (data.values) {
+                series.push({
+                    ...baseLine,
+                    name: getChartTitle(chartType),
+                    data: data.values,
+                    itemStyle: { color: '#3498db' }
+                });
+            }
+
+            // 新增：BBW 多序列（当日、3日、7日、30日）
+            if (chartType === 'bbw') {
+                /**
+                 * BBW 多时间尺度序列：
+                 * - 当日：原始 BBW
+                 * - 3日/7日/30日：BBW 的滚动均值
+                 */
+                if (data.bbw_daily) {
+                    series.push({
+                        ...baseLine,
+                        name: '当日',
+                        data: data.bbw_daily,
+                        itemStyle: { color: '#2ecc71' }
+                    });
+                }
+                if (data.bbw_3d) {
+                    series.push({
+                        ...baseLine,
+                        name: '3日',
+                        data: data.bbw_3d,
+                        itemStyle: { color: '#3498db' }
+                    });
+                }
+                if (data.bbw_7d) {
+                    series.push({
+                        ...baseLine,
+                        name: '7日',
+                        data: data.bbw_7d,
+                        itemStyle: { color: '#9b59b6' }
+                    });
+                }
+                if (data.bbw_30d) {
+                    series.push({
+                        ...baseLine,
+                        name: '30日',
+                        data: data.bbw_30d,
+                        itemStyle: { color: '#e67e22' }
+                    });
+                }
+            }
+
+            // 波动率多系列
+            if (chartType === 'volatility') {
+                if (data.volatility_7d) {
+                    series.push({
+                        ...baseLine,
+                        name: '7日波动率',
+                        data: data.volatility_7d,
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                if (data.volatility_30d) {
+                    series.push({
+                        ...baseLine,
+                        name: '30日波动率',
+                        data: data.volatility_30d,
+                        itemStyle: { color: '#f39c12' }
+                    });
+                }
+                if (data.volatility_90d) {
+                    series.push({
+                        ...baseLine,
+                        name: '90日波动率',
+                        data: data.volatility_90d,
+                        itemStyle: { color: '#9b59b6' }
+                    });
+                }
+            }
+
+            // 流动性多系列
+            if (chartType === 'liquidity') {
+                if (data.liquidity_30d) {
+                    series.push({
+                        ...baseLine,
+                        name: '30日流动性指数',
+                        data: data.liquidity_30d,
+                        itemStyle: { color: '#2ecc71' }
+                    });
+                }
+                if (data.liquidity_90d) {
+                    series.push({
+                        ...baseLine,
+                        name: '90日流动性指数',
+                        data: data.liquidity_90d,
+                        itemStyle: { color: '#e67e22' }
+                    });
+                }
+            }
+
+            // MVRV 多周期
+            if (chartType === 'new_mvrv') {
+                if (data.mvrv_30d) {
+                    series.push({
+                        ...baseLine,
+                        name: 'MVRV 30日',
+                        data: data.mvrv_30d,
+                        itemStyle: { color: '#8e44ad' }
+                    });
+                }
+                if (data.mvrv_90d) {
+                    series.push({
+                        ...baseLine,
+                        name: 'MVRV 90日',
+                        data: data.mvrv_90d,
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                if (data.mvrv_180d) {
+                    series.push({
+                        ...baseLine,
+                        name: 'MVRV 180日',
+                        data: data.mvrv_180d,
+                        itemStyle: { color: '#f39c12' }
+                    });
+                }
+                if (data.mvrv_365d) {
+                    series.push({
+                        ...baseLine,
+                        name: 'MVRV 365日',
+                        data: data.mvrv_365d,
+                        lineStyle: { width: 3 },
+                        itemStyle: { color: '#27ae60' }
+                    });
+                }
+            }
+
+            // 山寨币指数多时间尺
+            if (chartType === 'altcoin') {
+                if (data.altcoin_month) {
+                    series.push({
+                        ...baseLine,
+                        name: '山寨币月指数',
+                        data: data.altcoin_month,
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                if (data.altcoin_season) {
+                    series.push({
+                        ...baseLine,
+                        name: '山寨币季指数',
+                        data: data.altcoin_season,
+                        itemStyle: { color: '#f39c12' }
+                    });
+                }
+                if (data.altcoin_year) {
+                    series.push({
+                        ...baseLine,
+                        name: '山寨币年指数',
+                        data: data.altcoin_year,
+                        itemStyle: { color: '#27ae60' }
+                    });
+                }
+                if (data.altcoin_index) {
+                    series.push({
+                        ...baseLine,
+                        name: '山寨币综合指数',
+                        data: data.altcoin_index,
+                        lineStyle: { width: 3 },
+                        areaStyle: { opacity: 0.10 },
+                        itemStyle: { color: '#8e44ad' }
+                    });
+                }
+            }
+
+            // 交易所净流入
+            if (chartType === 'new_exchange_flow') {
+                // 处理1日净流入数据
+                if (data.net_flow_1d && data.dates) {
+                    const netFlowData = data.dates.map((date, index) => [date, data.net_flow_1d[index]]);
+                    series.push({
+                        ...baseLine,
+                        name: '净流入(1日)',
+                        data: netFlowData,
+                        lineStyle: { width: 3 },
+                        itemStyle: { color: '#1abc9c' },
+                        markLine: {
+                            symbol: 'none',
+                            lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.35)' },
+                            data: [{ yAxis: 0 }]
+                        }
+                    });
+                }
+                
+                // 处理总流入数据
+                if (data.total_inflow_1d && data.dates) {
+                    const inflowData = data.dates.map((date, index) => [date, data.total_inflow_1d[index]]);
+                    series.push({
+                        ...baseLine,
+                        name: '总流入(1日)',
+                        data: inflowData,
+                        itemStyle: { color: '#2ecc71' }
+                    });
+                }
+                
+                // 处理总流出数据
+                if (data.total_outflow_1d && data.dates) {
+                    const outflowData = data.dates.map((date, index) => [date, data.total_outflow_1d[index]]);
+                    series.push({
+                        ...baseLine,
+                        name: '总流出(1日)',
+                        data: outflowData,
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                
+                // 处理7日净流入数据
+                if (data.net_flow_7d && data.dates) {
+                    const netFlow7dData = data.dates.map((date, index) => [date, data.net_flow_7d[index]]);
+                    series.push({
+                        ...baseLine,
+                        name: '净流入(7日)',
+                        data: netFlow7dData,
+                        lineStyle: { width: 2, type: 'dashed' },
+                        itemStyle: { color: '#9b59b6' }
+                    });
+                }
+            }
+
+            // 恐慌贪婪指数
+            if (chartType === 'fear_greed') {
+                // 处理恐慌贪婪指数数据
+                if (data.values && data.dates) {
+                    const fearGreedData = data.dates.map((date, index) => [date, data.values[index]]);
+                    series.push({
+                        ...baseLine,
+                        name: '恐慌贪婪指数',
+                        data: fearGreedData,
+                        lineStyle: { width: 3 },
+                        itemStyle: { color: '#3498db' },
+                        markLine: {
+                            symbol: 'none',
+                            lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.35)' },
+                            data: [
+                                { yAxis: 25, label: { formatter: '极度恐慌' } },
+                                { yAxis: 50, label: { formatter: '中性' } },
+                                { yAxis: 75, label: { formatter: '极度贪婪' } }
+                            ]
+                        }
+                    });
+                }
+            }
+
+            // AD百分比
+            if (chartType === 'ad_percentage') {
+                if (data.values) {
+                    series.push({
+                        ...baseLine,
+                        name: 'AD百分比',
+                        data: data.dates.map((date, index) => [date, data.values[index]]),
+                        itemStyle: { color: '#3498db' }
+                    });
+                }
+            }
+
+            // AHR999指标
+            if (chartType === 'ahr999') {
+                if (data.values) {
+                    series.push({
+                        ...baseLine,
+                        name: 'AHR999',
+                        data: data.dates.map((date, index) => [date, data.values[index]]),
+                        itemStyle: { color: '#e74c3c' },
+                        markLine: {
+                            symbol: 'none',
+                            lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.35)' },
+                            data: [
+                                { yAxis: 0.45, label: { formatter: '抄底区间' } },
+                                { yAxis: 1.2, label: { formatter: '定投区间' } }
+                            ]
+                        }
+                    });
+                }
+            }
+
+            // 极端移动比率
+            if (chartType === 'extreme_move') {
+                // 上涨极端比率
+                if (data.up_ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '上涨极端比率',
+                        data: data.dates.map((date, index) => [date, data.up_ratio[index]]),
+                        sampling: 'lttb',
+                        lineStyle: { width: 3, color: '#27ae60' },
+                        itemStyle: { color: '#27ae60' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(39,174,96,0.30)' },
+                                { offset: 1, color: 'rgba(39,174,96,0.00)' }
+                            ])
+                        }
+                    });
+                }
+                // 下跌极端比率
+                if (data.down_ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '下跌极端比率',
+                        data: data.dates.map((date, index) => [date, data.down_ratio[index]]),
+                        sampling: 'lttb',
+                        lineStyle: { width: 3, color: '#e74c3c' },
+                        itemStyle: { color: '#e74c3c' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(231,76,60,0.28)' },
+                                { offset: 1, color: 'rgba(231,76,60,0.00)' }
+                            ])
+                        }
+                    });
+                }
+                // 总极端比率（附带阈值线与高亮区域）
+                if (data.total_ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '总极端比率',
+                        data: data.dates.map((date, index) => [date, data.total_ratio[index]]),
+                        sampling: 'lttb',
+                        lineStyle: { width: 3, color: '#f39c12' },
+                        itemStyle: { color: '#f39c12' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(243,156,18,0.24)' },
+                                { offset: 1, color: 'rgba(243,156,18,0.00)' }
+                            ])
+                        },
+                        markLine: {
+                            symbol: 'none',
+                            lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.35)' },
+                            label: { color: '#555', formatter: '{b}: {c|}{per|}' },
+                            data: [
+                                { name: '过热阈值', yAxis: 0.4, label: { formatter: '过热阈值 40%' } },
+                                { name: '关注阈值', yAxis: 0.2, label: { formatter: '关注阈值 20%' } }
+                            ]
+                        },
+                        markArea: {
+                            silent: true,
+                            itemStyle: { color: 'transparent' },
+                            data: [
+                                // 过热区高亮：0.4 ~ 1.0
+                                [
+                                    { yAxis: 0.4, itemStyle: { color: 'rgba(231,76,60,0.06)' } },
+                                    { yAxis: 1.0 }
+                                ],
+                                // 冰点区高亮：0.0 ~ 0.1
+                                [
+                                    { yAxis: 0.0 },
+                                    { yAxis: 0.1, itemStyle: { color: 'rgba(39,174,96,0.05)' } }
+                                ]
+                            ]
+                        }
+                    });
+                }
+            }
+            // MVRVY指数
+            // if (chartType === 'mvrvy') {
+            //     if (data.values) {
+            //         series.push({
+            //             ...baseLine,
+            //             name: 'MVRVY指数',
+            //             data: data.dates.map((date, index) => [date, data.values[index]]),
+            //             itemStyle: { color: '#9b59b6' }
+            //         });
+            //     }
+            // }
+
+            // 涨跌比率
+            if (chartType === 'up_down_ratio') {
+                // 这里保持现有逻辑
+                if (data.up_ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '上涨比率',
+                        data: data.dates.map((date, index) => [date, data.up_ratio[index]]),
+                        itemStyle: { color: '#27ae60' }
+                    });
+                }
+                if (data.down_ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '下跌比率',
+                        data: data.dates.map((date, index) => [date, data.down_ratio[index]]),
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                if (data.ratio) {
+                    series.push({
+                        ...baseLine,
+                        name: '涨跌比',
+                        data: data.dates.map((date, index) => [date, data.ratio[index]]),
+                        itemStyle: { color: '#3498db' }
+                    });
+                }
+            }
+
+            // 横截面差异指数
+            if (chartType === 'cross_section') {
+                if (data.values) {
+                    series.push({
+                        ...baseLine,
+                        name: '横截面差异指数',
+                        data: data.dates.map((date, index) => [date, data.values[index]]),
+                        itemStyle: { color: '#e67e22' }
+                    });
+                }
+            }
+
+            // 链上稳定币供应量
+            if (chartType === 'onchain_stablecoin') {
+                if (data.usdt_supply) {
+                    series.push({
+                        ...baseLine,
+                        name: 'USDT供应量',
+                        data: data.dates.map((date, index) => [date, data.usdt_supply[index]]),
+                        itemStyle: { color: '#26a69a' }
+                    });
+                }
+                if (data.usdc_supply) {
+                    series.push({
+                        ...baseLine,
+                        name: 'USDC供应量',
+                        data: data.dates.map((date, index) => [date, data.usdc_supply[index]]),
+                        itemStyle: { color: '#2196f3' }
+                    });
+                }
+                if (data.dai_supply) {
+                    series.push({
+                        ...baseLine,
+                        name: 'DAI供应量',
+                        data: data.dates.map((date, index) => [date, data.dai_supply[index]]),
+                        itemStyle: { color: '#ff9800' }
+                    });
+                }
+                if (data.total_supply) {
+                    series.push({
+                        ...baseLine,
+                        name: '总供应量',
+                        data: data.dates.map((date, index) => [date, data.total_supply[index]]),
+                        lineStyle: { width: 3 },
+                        itemStyle: { color: '#f44336' }
+                    });
+                }
+            }
+
+            // 价差监控 - 参考波动率指数的美观设计
+            if (chartType === 'spread_monitor') {
+                const dates = data.dates || [];
+                const avgSpread = data.average_spread || [];
+                const spreadVol = data.spread_volatility || [];
+                
+                series.push({
+                    ...baseLine,
+                    name: '平均价差',
+                    data: dates.map((date, i) => [date, avgSpread[i] || 0]),
+                    itemStyle: { color: '#1890ff' },
+                    lineStyle: { width: 3 },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                            ]
+                        }
+                    },
+                    emphasis: {
+                        focus: 'series',
+                        lineStyle: { width: 4 },
+                        itemStyle: { borderWidth: 2, borderColor: '#fff' }
+                    }
+                });
+                
+                series.push({
+                    ...baseLine,
+                    name: '价差波动率',
+                    data: dates.map((date, i) => [date, spreadVol[i] || 0]),
+                    itemStyle: { color: '#f5222d' },
+                    lineStyle: { width: 2, type: 'dashed' },
+                    emphasis: {
+                        focus: 'series',
+                        lineStyle: { width: 3 },
+                        itemStyle: { borderWidth: 2, borderColor: '#fff' }
+                    }
+                });
+            }
+
+            // 资金费率
+            if (chartType === 'funding_rate') {
+                if (data.average_funding_rate) {
+                    series.push({
+                        ...baseLine,
+                        name: '平均资金费率',
+                        data: data.dates.map((date, index) => [date, data.average_funding_rate[index]]),
+                        itemStyle: { color: '#9b59b6' }
+                    });
+                }
+                if (data.funding_rate_volatility) {
+                    series.push({
+                        ...baseLine,
+                        name: '资金费率波动率',
+                        data: data.dates.map((date, index) => [date, data.funding_rate_volatility[index]]),
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+            }
+
+            // Y综合指数
+            if (chartType === 'y_composite') {
+                if (data.values) {
+                    series.push({
+                        ...baseLine,
+                        name: 'Y综合指数',
+                        data: data.dates.map((date, index) => [date, data.values[index]]),
+                        itemStyle: { color: '#2c3e50' }
+                    });
+                }
+                if (data.composite_score) {
+                    series.push({
+                        ...baseLine,
+                        name: '综合评分',
+                        data: data.dates.map((date, index) => [date, data.composite_score[index]]),
+                        itemStyle: { color: '#34495e' }
+                    });
+                }
+            }
+
+            // 高级指标
+            if (chartType === 'advanced_indicators') {
+                if (data.market_cap_weighted) {
+                    series.push({
+                        ...baseLine,
+                        name: '市值加权指数',
+                        data: data.dates.map((date, index) => [date, data.market_cap_weighted[index]]),
+                        itemStyle: { color: '#3498db' }
+                    });
+                }
+                if (data.fund_flow) {
+                    series.push({
+                        ...baseLine,
+                        name: '资金流向指标',
+                        data: data.dates.map((date, index) => [date, data.fund_flow[index]]),
+                        itemStyle: { color: '#27ae60' }
+                    });
+                }
+                if (data.value_deviation) {
+                    series.push({
+                        ...baseLine,
+                        name: '价值偏离度',
+                        data: data.dates.map((date, index) => [date, data.value_deviation[index]]),
+                        itemStyle: { color: '#e74c3c' }
+                    });
+                }
+                if (data.simulated_mvrv) {
+                    series.push({
+                        ...baseLine,
+                        name: '模拟MVRV比率',
+                        data: data.dates.map((date, index) => [date, data.simulated_mvrv[index]]),
+                        itemStyle: { color: '#9b59b6' }
+                    });
+                }
+            }
+
+            // 市场涨跌幅
+            if (chartType === 'market_zdf') {
+                if (data.zdf_index) {
+                    series.push({
+                        ...baseLine,
+                        name: '涨跌幅指数',
+                        data: data.dates.map((date, index) => [date, data.zdf_index[index]]),
+                        itemStyle: { color: '#3498db' }
+                    });
+                }
+                if (data.up_count && data.down_count) {
+                    series.push({
+                        type: 'bar',
+                        name: '上涨数量',
+                        data: data.dates.map((date, index) => [date, data.up_count[index]]),
+                        itemStyle: { color: '#27ae60' },
+                        yAxisIndex: 1
+                    });
+                    series.push({
+                        type: 'bar',
+                        name: '下跌数量',
+                        data: data.dates.map((date, index) => [date, data.down_count[index]]),
+                        itemStyle: { color: '#e74c3c' },
+                        yAxisIndex: 1
+                    });
+                }
+            }
+
+            return series;
+        }
+
+        // 改进的初始化函数
+        async function initializeData() {
+            try {
+                showLoading('正在初始化数据...');
+                
+                // 并行获取概览数据和图表数据
+                const promises = [
+                    fetchMarketOverview(),
+                    ...chartTypes.map(chartType => fetchChartData(chartType))
+                ];
+                
+                const results = await Promise.allSettled(promises);
+                
+                // 统计成功和失败的数量
+                const fulfilled = results.filter(r => r.status === 'fulfilled').length;
+                const rejected = results.filter(r => r.status === 'rejected').length;
+                
+                if (rejected === 0) {
+                    showNotification('数据初始化完成', 'success');
+                } else if (fulfilled > 0) {
+                    showNotification(`数据初始化部分完成 (${fulfilled}/${results.length})`, 'warning');
+                } else {
+                    showNotification('数据初始化失败', 'error');
+                }
+                
+            } catch (error) {
+                console.error('数据初始化失败:', error);
+                showNotification('数据初始化失败', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 刷新所有数据
+        async function refreshAllData() {
+            showNotification('正在刷新数据...', 'info');
+            try {
+                await initializeData();
+            } catch (error) {
+                console.error('刷新数据失败:', error);
+                showNotification('刷新数据失败', 'error');
+            }
+        }
+
+        // 显示系统信息
+        function showSystemInfo() {
+            const info = `
+系统信息：
+- 版本：Y指数监控系统 v2.1
+- 数据源：本地计算 + 链上数据
+- 更新频率：实时
+- 日志位置：data目录
+- 支持的指标：${chartTypes.length}个
+            `;
+            alert(info);
+        }
+
+        /**
+         * 动态加载外部脚本，并提供超时机制
+         * @param {string} url - 脚本地址
+         * @param {number} [timeout=8000] - 超时时间（毫秒）
+         * @returns {Promise<void>} - 成功/失败
+         */
+        function loadScript(url, timeout = 8000) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = true;
+                script.defer = true;
+
+                let done = false;
+                const timer = setTimeout(() => {
+                    if (done) return;
+                    done = true;
+                    script.remove();
+                    reject(new Error(`加载超时: ${url}`));
+                }, timeout);
+
+                script.onload = () => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    resolve();
+                };
+
+                script.onerror = () => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    script.remove();
+                    reject(new Error(`加载失败: ${url}`));
+                };
+
+                document.head.appendChild(script);
+            });
+        }
+
+        /**
+         * 依次尝试多个 ECharts 源进行加载
+         * - 若 window.echarts 已存在则直接返回
+         * - 依次尝试多个 CDN，最后回退到本地 /static 目录
+         * @returns {Promise<void>}
+         */
+        async function loadEChartsWithFallback() {
+            if (typeof window.echarts !== 'undefined') {
+                console.debug('[ECharts] 已存在，跳过加载');
+                return;
+            }
+
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js',
+                'https://unpkg.com/echarts@5.4.3/dist/echarts.min.js',
+                'https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js',
+                // 本地回退，需将 echarts.min.js 放入项目根目录 static/echarts/ 目录
+                '/static/echarts/echarts.min.js'
+            ];
+
+            let lastError = null;
+            for (const url of sources) {
+                try {
+                    console.debug('[ECharts] 尝试加载:', url);
+                    await loadScript(url, 8000);
+                    if (typeof window.echarts !== 'undefined') {
+                        console.info('[ECharts] 加载成功:', url);
+                        return;
+                    } else {
+                        // 少数场景 onload 返回但未挂载全局
+                        console.warn('[ECharts] onload 但未挂载全局:', url);
+                    }
+                } catch (err) {
+                    lastError = err;
+                    console.warn('[ECharts] 加载失败:', url, err && err.message);
+                }
+            }
+            throw lastError || new Error('ECharts 加载失败（所有来源均不可用）');
+        }
+
+        /**
+         * 确保 ECharts 已加载
+         * - 若未加载，自动尝试多源加载并在失败时回退到友好提示
+         * @returns {Promise<void>}
+         */
+        function ensureEChartsLoaded() {
+            return new Promise(async (resolve, reject) => {
+                if (typeof window.echarts !== 'undefined') {
+                    resolve();
+                    return;
+                }
+
+                try {
+                    await loadEChartsWithFallback();
+                    if (typeof window.echarts !== 'undefined') {
+                        resolve();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('ECharts 加载失败:', e && e.message);
+                }
+
+                // 如果ECharts未加载，显示错误信息
+                const chartContainers = document.querySelectorAll('[id$="_chart"]');
+                chartContainers.forEach(container => {
+                    if (!container) return;
+                    container.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #e74c3c; text-align: center;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">图表加载失败</div>
+                            <div style="font-size: 0.9rem; color: #7f8c8d;">
+                                ECharts库未能正确加载，请检查网络连接或稍后重试。<br/>
+                                如多次失败，可将 echarts.min.js 放置于 /static/echarts/ 后刷新页面。
+                            </div>
+                        </div>
+                    `;
+                });
+
+                reject(new Error('ECharts库未加载'));
+            });
+        }
+
+        /**
+         * 切换图表说明的展开/收起状态
+         * @param {HTMLElement} button - 切换按钮元素
+         */
+        function toggleDescription(button) {
+            const details = button.previousElementSibling;
+            const isHidden = details.style.display === 'none';
+            
+            if (isHidden) {
+                details.style.display = 'block';
+                button.textContent = '收起说明 ▲';
+            } else {
+                details.style.display = 'none';
+                button.textContent = '展开说明 ▼';
+            }
+        }
+
+        // 统一的启动函数
+        async function bootstrapCharts() {
+            try {
+                // 检查ECharts是否加载
+                await ensureEChartsLoaded();
+                
+                // 初始化数据
+                await initializeData();
+                
+                // 设置定时刷新（每120秒）
+                setInterval(fetchMarketOverview, 120000);
+                
+                console.log('图表系统初始化完成');
+                
+            } catch (error) {
+                console.error('图表系统初始化失败:', error);
+                showNotification('图表系统初始化失败: ' + error.message, 'error');
+            }
+        }
+
+        // 健壮的启动入口
+        function startApplication() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bootstrapCharts);
+            } else {
+                // DOM已经加载完成，直接启动
+                bootstrapCharts();
+            }
+        }
+
+        // 页面加载完成后初始化 - 替换原有的 $(document).ready()
+        startApplication();
+
+        // 窗口大小改变时重新调整图表
+        window.addEventListener('resize', function() {
+            Object.values(charts).forEach(chart => {
+                if (chart) {
+                    chart.resize();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

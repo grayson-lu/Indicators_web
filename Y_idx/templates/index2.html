@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>数字货币市场监控面板 · Y指数 2.0</title>
+
+<!-- ===== 三方库 ===== -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+
+<!-- ===== 设计变量 ===== -->
+<style>
+:root{
+  /* 颜色变量（浅色） */
+  --bg: #f2f5fa;
+  --bg-glass: rgba(255,255,255,.55);
+  --card: #ffffff;
+  --primary: #007AFF;
+  --secondary:#34C759;
+  --danger:#FF3B30;
+  --warning:#FF9500;
+  --text:#111827;
+  --text2:#6b7280;
+  --line:#e5e7eb;
+  --shadow:0 8px 32px rgba(0,0,0,.04);
+  --shadow-hover:0 12px 48px rgba(0,0,0,.12);
+  --radius:20px;
+  --radius-sm:12px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#111827;
+  --bg-glass:rgba(31,41,55,.55);
+  --card:#1f2937;
+  --text:#f9fafb;
+  --text2:#9ca3af;
+  --line:#374151;
+  --shadow:0 8px 32px rgba(0,0,0,.4);
+  --shadow-hover:0 12px 48px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+body::-webkit-scrollbar{width:8px}
+body::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+body::-webkit-scrollbar-track{background:transparent}
+
+/* ===== 导航 ===== */
+.navbar{
+  position:fixed;top:0;left:0;right:0;height:72px;
+  padding:0 32px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg-glass);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--line);z-index:1000;
+}
+.logo{font-size:24px;font-weight:800;display:flex;align-items:center;gap:10px;cursor:pointer}
+.logo i{color:var(--primary)}
+.nav-links{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:var(--radius-sm)}
+.nav-links a{padding:8px 16px;font-size:14px;font-weight:600;border-radius:var(--radius-sm);transition:.3s var(--ease)}
+.nav-links a.active,.nav-links a:hover{background:var(--primary);color:#fff;box-shadow:0 2px 8px var(--primary)}
+.status{display:flex;align-items:center;gap:8px;font-size:14px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--secondary);animation:pulse 2s infinite}
+@keyframes pulse{50%{transform:scale(1.4);opacity:.6}}
+.drawer-toggle{display:none;font-size:24px;background:none;border:none;color:var(--text)}
+
+/* ===== 主容器 ===== */
+.container{max-width:1440px;margin:88px auto 0;padding:0 32px 60px}
+.section-title{font-size:28px;font-weight:800;margin-bottom:24px;display:flex;align-items:center;gap:12px}
+.section-title i{color:var(--primary)}
+
+/* ===== 卡片 ===== */
+.grid{display:grid;gap:24px}
+.grid-4{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.grid-2{grid-template-columns:repeat(auto-fill,minmax(440px,1fr))}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);transition:.35s var(--ease);position:relative;overflow:hidden
+}
+.card::before{ /* 霓虹光泽 */
+  content:"";position:absolute;inset:0;border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--primary),transparent 40%);
+  opacity:0;transition:.4s;pointer-events:none
+}
+.card:hover{transform:translateY(-6px) scale(1.01);box-shadow:var(--shadow-hover)}
+.card:hover::before{opacity:.08}
+.card-head{padding:24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.card-icon{width:48px;height:48px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+.card-body{padding:24px}
+
+/* ===== 数值 ===== */
+.big{font-size:36px;font-weight:900;margin:8px 0;background:linear-gradient(135deg,var(--text),var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tag{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.tag-up{background:rgba(52,199,89,.15);color:var(--secondary)}
+.tag-down{background:rgba(255,59,48,.15);color:var(--danger)}
+.tag-neutral{background:var(--line);color:var(--text2)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:16px;margin-bottom:20px}
+.metric{background:var(--bg);padding:12px;border-radius:var(--radius-sm);text-align:center}
+.metric small{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.metric strong{font-size:18px;font-weight:800}
+
+/* ===== 图表 ===== */
+.chart{height:400px;border-radius:var(--radius);overflow:hidden;cursor:grab}
+.chart:active{cursor:grabbing}
+.chart-sm{height:220px}
+
+/* ===== 情绪 ===== */
+.sentiment-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}
+.gauge{position:relative;width:100px;height:100px;margin:0 auto 12px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:var(--line);stroke-width:10}
+.gauge-fill{fill:none;stroke:var(--primary);stroke-width:10;stroke-linecap:round;transition:stroke-dasharray 1s var(--ease)}
+.gauge-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22px;font-weight:800}
+
+/* ===== 模态框 ===== */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:2000}
+.modal-content{width:90vw;height:80vh;max-width:1200px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-hover);animation:zoomIn .3s var(--ease);overflow:hidden;display:flex;flex-direction:column}
+@keyframes zoomIn{from{transform:scale(.9);opacity:0}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--line)}
+.modal-close{background:none;border:none;font-size:24px;color:var(--text2);cursor:pointer;transition:.2s}
+.modal-close:hover{color:var(--danger)}
+.modal-body{flex:1;padding:20px}
+
+/* ===== 抽屉 ===== */
+.drawer{position:fixed;top:0;left:-260px;width:260px;height:100%;background:var(--card);border-right:1px solid var(--line);z-index:1100;transition:.3s var(--ease)}
+.drawer.open{left:0}
+.drawer a{display:block;padding:16px 24px;font-weight:600;border-bottom:1px solid var(--line)}
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1099;display:none}
+
+/* ===== 返回顶部 ===== */
+#topBtn{position:fixed;bottom:24px;right:24px;width:50px;height:50px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-size:20px;cursor:pointer;opacity:0;transform:scale(.5);transition:.3s var(--ease);z-index:998}
+#topBtn.show{opacity:1;transform:scale(1)}
+
+/* ===== 响应式 ===== */
+@media(max-width:768px){
+  .navbar{padding:0 16px}
+  .container{padding:0 16px}
+  .nav-links{display:none}
+  .drawer-toggle{display:block}
+  .grid-4,.grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== 顶部导航 ===== -->
+<header class="navbar">
+  <div class="logo" onclick="scrollToTop()">
+    <i class="fas fa-chart-line"></i>
+    <span>Y指数监控</span>
+  </div>
+
+  <nav class="nav-links">
+    <a href="#overview" class="active">概览</a>
+    <a href="#value">价值</a>
+    <a href="#technical">技术</a>
+    <a href="#sentiment">情绪</a>
+    <a href="#structure">结构</a>
+    <a href="#strategy">策略</a>
+  </nav>
+
+  <div class="status">
+    <span class="pulse"></span>
+    <span id="lastUpdate">加载中...</span>
+  </div>
+
+  <button class="drawer-toggle" onclick="toggleDrawer()"><i class="fas fa-bars"></i></button>
+</header>
+
+<!-- 移动端抽屉 -->
+<aside class="drawer" id="drawer">
+  <a href="#overview" onclick="closeDrawer()">· 概览</a>
+  <a href="#value" onclick="closeDrawer()">· 价值指标</a>
+  <a href="#technical" onclick="closeDrawer()">· 技术指标</a>
+  <a href="#sentiment" onclick="closeDrawer()">· 情绪指标</a>
+  <a href="#structure" onclick="closeDrawer()">· 结构指标</a>
+  <a href="#strategy" onclick="closeDrawer()">· 策略信号</a>
+</aside>
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- ===== 主容器 ===== -->
+<main class="container">
+
+  <!-- 概览 -->
+  <section id="overview">
+    <h2 class="section-title"><i class="fas fa-tachometer-alt"></i>市场概览</h2>
+    <div class="grid grid-4">
+      <!-- Y指数 -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Y指数</span>
+          <div class="card-icon" style="background:linear-gradient(135deg,#007AFF,#5AC8FA)"><i class="fas fa-chart-line"></i></div>
+        </div>
+        <div class="card-body">
+          <div class="big">{{ latest_value or '0.00' }}</div>
+          <span class="tag tag-up"><i class="fas fa-arrow-up"></i> +2.34% 24h</span>
+        </div>
+      </div>
+
+      <!-- 波动率 -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">波动率 30D</span>
+          <div class="card-icon" style="background:linear-gradient(135deg,#FF9500,#FFCC02)"><i class="fas fa-wave-square"></i></div>
+        </div>
+        <div class="card-body">
+          <div class="big">{{ latest_volatility_30d or '0.00' }}</div>
+          <span class="tag tag-down"><i class="fas fa-arrow-down"></i> -1.23%</span>
+        </div>
+      </div>
+
+      <!-- 流动性 -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">流动性 30D</span>
+          <div class="card-icon" style="background:linear-gradient(135deg,#34C759,#30D158)"><i class="fas fa-tint"></i></div>
+        </div>
+        <div class="card-body">
+          <div class="big">{{ latest_liquidity_30d or '0.00' }}</div>
+          <span class="tag tag-up"><i class="fas fa-arrow-up"></i> +0.56%</span>
+        </div>
+      </div>
+
+      <!-- 市场宽度 -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">市场宽度</span>
+          <div class="card-icon" style="background:linear-gradient(135deg,#FF3B30,#FF6482)"><i class="fas fa-expand-arrows-alt"></i></div>
+        </div>
+        <div class="card-body">
+          <div class="big">{{ latest_market_breadth or '0.00' }}</div>
+          <span class="tag tag-neutral"><i class="fas fa-minus"></i> 0.00%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主图表 -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Y指数走势</span>
+        <div>
+          <button class="tag" onclick="changePeriod('1d',this)">1D</button>
+          <button class="tag" onclick="changePeriod('7d',this)">7D</button>
+          <button class="tag active" onclick="changePeriod('30d',this)">30D</button>
+          <button class="tag" onclick="changePeriod('90d',this)">90D</button>
+        </div>
+      </div>
+      <div class="chart chart-sm" onclick="openModal('Y指数走势',this)">
+        {{ y_idx_chart|safe }}
+      </div>
+    </div>
+  </section>
+
+  <!-- 指标切换 -->
+  <div style="display:flex;gap:8px;margin:32px 0;flex-wrap:wrap">
+    <button class="tag active" onclick="filterCat('all')">全部</button>
+    <button class="tag" onclick="filterCat('value')">价值指标</button>
+    <button class="tag" onclick="filterCat('technical')">技术指标</button>
+    <button class="tag" onclick="filterCat('sentiment')">情绪指标</button>
+    <button class="tag" onclick="filterCat('structure')">结构指标</button>
+    <button class="tag" onclick="filterCat('strategy')">策略信号</button>
+  </div>
+
+  <!-- 指标网格 -->
+  <div class="grid grid-2">
+    <!-- 山寨币 -->
+    <div class="card indicator-card" data-cat="value">
+      <div class="card-head"><span class="card-title">山寨币指数</span><span class="tag tag-up">看涨</span></div>
+      <div class="card-body">
+        <div class="metrics">
+          <div class="metric"><small>月度</small><strong>{{ latest_altcoin_month or '0.00' }}</strong></div>
+          <div class="metric"><small>季度</small><strong>{{ latest_altcoin_season or '0.00' }}</strong></div>
+          <div class="metric"><small>年度</small><strong>{{ latest_altcoin_year or '0.00' }}</strong></div>
+        </div>
+        <div class="chart chart-sm" onclick="openModal('山寨币指数',this)">{{ altcoin_chart|safe }}</div>
+      </div>
+    </div>
+
+    <!-- 波动率 -->
+    <div class="card indicator-card" data-cat="technical">
+      <div class="card-head"><span class="card-title">波动率指数</span><span class="tag tag-neutral">中性</span></div>
+      <div class="card-body">
+        <div class="metrics">
+          <div class="metric"><small>7d</small><strong>{{ latest_volatility_7d or '0.00' }}</strong></div>
+          <div class="metric"><small>30d</small><strong>{{ latest_volatility_30d or '0.00' }}</strong></div>
+          <div class="metric"><small>90d</small><strong>{{ latest_volatility_90d or '0.00' }}</strong></div>
+        </div>
+        <div class="chart chart-sm" onclick="openModal('波动率指数',this)">{{ volatility_chart|safe }}</div>
+      </div>
+    </div>
+
+    <!-- 流动性 -->
+    <div class="card indicator-card" data-cat="structure">
+      <div class="card-head"><span class="card-title">流动性指数</span><span class="tag tag-up">充足</span></div>
+      <div class="card-body">
+        <div class="metrics">
+          <div class="metric"><small>7d</small><strong>{{ latest_liquidity_7d or '0.00' }}</strong></div>
+          <div class="metric"><small>30d</small><strong>{{ latest_liquidity_30d or '0.00' }}</strong></div>
+          <div class="metric"><small>90d</small><strong>{{ latest_liquidity_90d or '0.00' }}</strong></div>
+        </div>
+        <div class="chart chart-sm" onclick="openModal('流动性指数',this)">{{ liquidity_chart|safe }}</div>
+      </div>
+    </div>
+
+    <!-- 市场宽度 -->
+    <div class="card indicator-card" data-cat="technical">
+      <div class="card-head"><span class="card-title">市场宽度</span><span class="tag tag-neutral">平衡</span></div>
+      <div class="card-body">
+        <div class="metrics">
+          <div class="metric"><small>上涨</small><strong>{{ latest_up_ratio or '0' }}%</strong></div>
+          <div class="metric"><small>下跌</small><strong>{{ latest_down_ratio or '0' }}%</strong></div>
+          <div class="metric"><small>新高</small><strong>{{ latest_new_highs or '0' }}</strong></div>
+        </div>
+        <div class="chart chart-sm" onclick="openModal('市场宽度',this)">{{ market_breadth_chart|safe }}</div>
+      </div>
+    </div>
+
+    <!-- 情绪 -->
+    <div class="card indicator-card" data-cat="sentiment" style="grid-column:1/-1">
+      <div class="card-head"><span class="card-title">市场情绪</span><span class="tag tag-neutral">观望</span></div>
+      <div class="card-body">
+        <div class="sentiment-row">
+          <div class="gauge">
+            <svg viewBox="0 0 100 100">
+              <circle class="gauge-bg" cx="50" cy="50" r="40" stroke-width="10"></circle>
+              <circle class="gauge-fill" cx="50" cy="50" r="40" stroke-width="10"
+                      stroke-dasharray="188.4" stroke-dashoffset="75.36"></circle>
+            </svg>
+            <div class="gauge-text">75</div>
+          </div>
+          <div style="text-align:center">
+            <small>恐慌贪婪</small><br>
+            <strong>贪婪</strong>
+          </div>
+        </div>
+        <div class="sentiment-row">
+          <div class="sentiment-row">
+            <div class="sentiment-row">
+              <!-- 其余情绪项同理，此处略 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 综合指标 -->
+    <div class="card indicator-card" data-cat="strategy" style="grid-column:1/-1">
+      <div class="card-head"><span class="card-title">综合市场指标</span><span class="tag tag-up">积极</span></div>
+      <div class="card-body">
+        <div class="chart" onclick="openModal('综合指标',this)">{{ market_indicators_chart|safe }}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- 图表放大模态框 -->
+<div class="modal" id="chartModal">
+  <div class="modal-content">
+    <div class="modal-head">
+      <span id="modalTitle">图表详情</span>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- 返回顶部 -->
+<button id="topBtn" onclick="scrollToTop()"><i class="fas fa-chevron-up"></i></button>
+
+<!-- ===== 脚本 ===== -->
+<script>
+/* 时间更新 */
+function updateTime(){
+  $('#lastUpdate').text('最后更新: '+new Date().toLocaleString('zh-CN'));
+}
+setInterval(updateTime,30000);updateTime();
+
+/* 主题切换 */
+const root=document.documentElement;
+$('#themeToggle').on('click',()=>{
+  root.dataset.theme=root.dataset.theme==='dark'?'':'dark';
+  localStorage.setItem('theme',root.dataset.theme||'');
+});
+if(localStorage.getItem('theme')==='dark')root.dataset.theme='dark';
+
+/* 抽屉 */
+function toggleDrawer(){
+  $('#drawer').toggleClass('open');
+  $('#drawerOverlay').toggle();
+}
+function closeDrawer(){
+  $('#drawer').removeClass('open');
+  $('#drawerOverlay').hide();
+}
+
+/* 标签过滤 */
+function filterCat(cat){
+  $('.indicator-card').each(function(){
+    $(this).toggle(cat==='all'||$(this).data('cat')===cat);
+  });
+  $('.tag').removeClass('active').filter(function(){return $(this).text().includes(cat==='all'?'全部':cat)}).addClass('active');
+}
+
+/* 图表放大 */
+function openModal(title,el){
+  $('#modalTitle').text(title);
+  $('#modalBody').empty().append($(el).clone().css({height:'100%',transform:'none'}));
+  $('#chartModal').fadeIn(200);
+}
+function closeModal(){
+  $('#chartModal').fadeOut(200);
+}
+$(document).on('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+/* 周期按钮高亮 */
+function changePeriod(p,btn){
+  $(btn).addClass('active').siblings().removeClass('active');
+  /* 此处可请求后端新周期数据 */
+}
+
+/* 返回顶部 */
+$(window).on('scroll',()=>$('#topBtn').toggleClass('show',window.scrollY>300));
+</script>
+
+</body>
+</html>
